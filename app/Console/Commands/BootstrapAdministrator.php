@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rules\Password;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class BootstrapAdministrator extends Command
 {
@@ -36,9 +37,18 @@ class BootstrapAdministrator extends Command
         $validator = Validator::make(['name' => $name, 'email' => $email, 'password' => $password, 'password_confirmation' => $confirmation], [
             'name' => ['required', 'string', 'max:160'], 'email' => ['required', 'email:rfc', 'max:254', 'ends_with:.test', 'unique:users,email'],
             'password' => ['required', 'confirmed', Password::min(12)->mixedCase()->numbers()],
+        ], [
+            'email.ends_with' => 'O e-mail fictício precisa terminar em .test, por exemplo admin@example.test.',
+            'email.unique' => 'Esse e-mail já está cadastrado. Use outro e-mail fictício ou revise a conta existente.',
+            'password.required' => 'A senha ficou vazia. Digite-a mesmo que os caracteres não apareçam na tela.',
+            'password.confirmed' => 'As duas senhas digitadas não são iguais. Digite a mesma senha nas duas perguntas.',
         ]);
         if ($validator->fails()) {
-            $this->error('Dados inválidos. Confira nome, e-mail .test e requisitos da senha. Nenhuma conta criada.');
+            $this->error('Não foi possível criar a conta. Corrija os itens abaixo:');
+            foreach ($validator->errors()->all() as $message) {
+                $this->line(' - '.$message);
+            }
+            $this->warn('Nenhuma conta criada. Execute php artisan auth:bootstrap para tentar novamente.');
 
             return self::FAILURE;
         }
@@ -52,7 +62,16 @@ class BootstrapAdministrator extends Command
 
             return $user;
         });
-        $user->sendEmailVerificationNotification();
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (TransportExceptionInterface $exception) {
+            $this->warn('A conta foi criada, mas não foi possível enviar o e-mail de confirmação.');
+            $this->line('Inicie a captura local com: & .\scripts\iniciar-mailpit.ps1');
+            $this->line('Depois entre no sistema e use Reenviar confirmação. Não repita o cadastro.');
+            $this->line('Desative AUTH_BOOTSTRAP_ENABLED após a inicialização.');
+
+            return self::FAILURE;
+        }
         $this->info('Conta criada sem privilégios operacionais até confirmar e-mail e MFA. Confira a captura local.');
         $this->info('Desative AUTH_BOOTSTRAP_ENABLED após a inicialização.');
 

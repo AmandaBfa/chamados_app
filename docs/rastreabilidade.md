@@ -1,6 +1,6 @@
 # Rastreabilidade
 
-Etapa 2: AC03 e AC04 atendidos no escopo de autenticação/administração local, com testes PostgreSQL indicados abaixo. AC01/AC02 e demais fluxos futuros permanecem pendentes. Evidências pontuais não substituem o fluxo completo. Numeração de etapas segue o pedido de execução, detalhando a seção 18 da especificação sem modificar a cópia original.
+Etapas 2 e 3: AC03 e AC04 atendidos no escopo de autenticação/administração local. AC05 tem evidência parcial nos cadastros, aguardando formulário de abertura da etapa 4. AC01/AC02 e demais fluxos futuros permanecem pendentes. Evidências pontuais não substituem o fluxo completo. Numeração de etapas segue o pedido de execução, detalhando a seção 18 da especificação sem modificar a cópia original.
 
 | Critério | Etapa responsável | Estado / evidência atual |
 |---|---|---|
@@ -8,7 +8,7 @@ Etapa 2: AC03 e AC04 atendidos no escopo de autenticação/administração local
 | AC02 isolamento de notas internas | 5 | Pendente |
 | AC03 desativação em sessão aberta | 2 | Atendido: AccessControlTest::test_deactivation_revokes_database_sessions_and_old_session_cannot_return_after_reactivation e test_deactivated_session_is_blocked_on_livewire_update; sessão pendente MFA também bloqueada |
 | AC04 cadastro controlado | 2 | Atendido: GET/POST /register 404; convites autorizados, expiração/uso único, perfis comuns proibidos de administrar e bootstrap restrito; evidências em AccessControlTest |
-| AC05 subcategoria dependente | 3, 4 | Pendente |
+| AC05 subcategoria dependente | 3, 4 | Parcial: CatalogTest::test_incompatible_subcategory_rejected_and_category_change_clears_selection e test_database_composite_foreign_key_and_historical_reference_are_enforced; abertura de chamados ainda ausente |
 | AC06 idempotência na abertura | 4 | Pendente |
 | AC07 transferência preserva SLA | 5, 6 | Pendente |
 | AC08 sexta 16h + 2h úteis | 6 | Pendente |
@@ -30,14 +30,14 @@ Etapa 2: AC03 e AC04 atendidos no escopo de autenticação/administração local
 | Seções | Requisito | Etapas | Evidência / pendência |
 |---|---|---|---|
 | 1–4 | decisões, arquitetura e distribuição isolada | 1, 8 | Base Laravel/Livewire/Tailwind e PostgreSQL configurado; instalação isolada documentada; produção pendente |
-| 5–6 | usuários, identidades, funções, equipes, cadastro controlado e MFA administrativo | 2–3 | Autenticação local, sete perfis, convites, MFA, desativação/sessões e auditoria implementados/testados; equipes/unidades/setores ficam na etapa 3 |
-| 7–8 | abertura e catálogo integral | 3–4 | Preservados na referência; sem tabelas funcionais |
+| 5–6 | usuários, identidades, funções, equipes, cadastro controlado e MFA administrativo | 2–3 | Autenticação, sete perfis, convites, MFA, desativação/sessões, auditoria e organização implementados; CatalogTest cobre membros, referências, vínculos e ausência de autoelevação |
+| 7–8 | abertura e catálogo integral | 3–4 | 11 categorias/41 subcategorias e 16 serviços persistidos; seed idempotente e formulários administrativos testados; abertura/anexos pendentes |
 | 9–10 | fluxo, colaboração, prioridades e histórico | 5 | Apenas modelo proposto |
 | 11 | calendário e dois relógios versionados | 6 | Apenas modelo proposto; sem implementação |
 | 12 | alertas e escalonamento | 7 | Infraestrutura de fila preparada; sem jobs de negócio |
 | 13 | três experiências, temas e acessibilidade | 1, 4–5, 8 | Tela mínima de fundação e tema; demais telas pendentes |
 | 14 | indicadores e confiabilidade | 7 | Sem dashboard nem números fictícios |
-| 15 | modelo relacional completo | 1–7 | docs/modelo-dados.md; infraestrutura e identidade/acesso migrados, demais entidades propostas |
+| 15 | modelo relacional completo | 1–7 | docs/modelo-dados.md; infraestrutura, identidade/acesso e cadastros migrados; chamados/SLA/alertas propostos |
 | 16 | autorização, anexos privados, operação e backup | 1–2, 4–5, 8 | Disco privado preparado; controles funcionais/operação pendentes |
 | 17 | critérios de aceitação | 2–8 | Tabela acima; AC03/AC04 com evidência, demais pendentes ou parciais |
 | 18–20 | execução, validações e manutenção | 1–8 | docs/progresso.md e decisões técnicas; aprovações corporativas preservadas |

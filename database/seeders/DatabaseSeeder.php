@@ -14,6 +14,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Nenhuma conta é criada na fundação. Cadastro controlado: etapa 2.
+        $this->call(InitialCatalogSeeder::class);
     }
 }

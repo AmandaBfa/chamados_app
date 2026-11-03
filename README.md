@@ -1,6 +1,6 @@
 # Sistema de chamados de TI
 
-Etapas 1 e 2: fundação, autenticação local e administração mínima. Laravel 13.39.0, Livewire 4.4.8, Tailwind 4.3.3, Vite 7.3.7, Fortify 1.41.0 e PostgreSQL. Não há cadastro público, integração Microsoft ou módulos de chamados/SLA implementados.
+Etapas 1, 2 e 3: fundação, autenticação local, administração e cadastros. Laravel 13.39.0, Livewire 4.4.8, Tailwind 4.3.3, Vite 7.3.7, Fortify 1.41.0 e PostgreSQL. Não há cadastro público, integração Microsoft ou módulos de chamados/SLA implementados.
 
 ## Ambiente
 
@@ -137,7 +137,7 @@ php artisan route:list
 
 A suíte Feature agora exige PostgreSQL de testes migrado. Os testes que escrevem usam transações com rollback e verificam a identidade real do banco chamados_test antes de escrever. DB_URL é forçado vazio nos testes. Não há limpeza destrutiva de banco.
 
-Roteiro de teste humano: docs/testes-etapa2.md. Evidências/resultados reais: docs/progresso.md. Se Git avisar sobre ownership, usar exceção apenas por comando: git -c safe.directory=C:/laragon/www/Sistema_de_chamado status.
+Roteiros de teste humano: docs/testes-etapa2.md e docs/testes-etapa3.md. Evidências/resultados reais: docs/progresso.md. Regressão em 03/11/2026: 48 testes/572 assertions aprovados. Se Git avisar sobre ownership, usar exceção apenas por comando: git -c safe.directory=C:/laragon/www/Sistema_de_chamado status.
 
 ## Continuidade
 
@@ -148,4 +148,22 @@ Roteiro de teste humano: docs/testes-etapa2.md. Evidências/resultados reais: do
 - docs/rastreabilidade.md: AC03/AC04 com evidência; AC01/AC02 permanecem pendentes.
 - docs/progresso.md: estados, comandos, resultados e limitações.
 
-Próxima etapa somente após nova solicitação: cadastros (unidades/setores/equipes/catálogos). Nenhum push, publicação, Microsoft ou alteração de rede corporativa foi realizado.
+Próxima etapa somente após nova solicitação: portal do colaborador (abertura, próprios chamados, conversa pública e anexos). Nenhum push, publicação, Microsoft ou alteração de rede corporativa foi realizado.
+
+## Cadastros e organização — etapa 3
+
+Após migrar uma cópia nova, importar o catálogo:
+
+~~~powershell
+php artisan db:seed --class=InitialCatalogSeeder --no-interaction
+~~~
+
+Nesta instalação local a migração já foi aplicada e o seed já foi executado duas vezes. São 5 equipes (quatro iniciais e Desenvolvimento restrito a encaminhamentos específicos), 11 categorias, 41 subcategorias e 16 serviços (dez nominados e seis exemplos configuráveis de infraestrutura). Nenhuma pessoa, unidade ou setor real é criado.
+
+Entrar com administrador, MFA confirmado e senha recente; acessar **Cadastros e organização** no início. Páginas em /administracao/cadastros/units, departments, teams, team_members, categories, subcategories, services, equipment_references e users. A administração de acesso continua em /administracao/usuarios; organização/perfis são separados.
+
+Cadastrar unidade/cidade e setor; vincular usuários em Organização dos usuários. Cadastrar equipe, depois membros, e só então escolher referência/substituto. Serviços aceitam equipe padrão, referência membro da equipe, categoria/subcategoria, fornecedor e criticidade proposta. Cobertura de triagem e alternativa para críticos são indicações manuais por equipe, sem escala ou automação. Criticidade não define P1; Solus inicia sem classificação.
+
+O seed usa seed_key estável: repetição não atualiza registros existentes, nomes alterados, inativação ou personalizações. Conflito com nome de cadastro manual aborta toda a transação; resolver o conflito explicitamente antes de repetir, sem adotar/sobrescrever registros manuais. Não apagar nem alterar seed_key diretamente. Não há exclusão operacional; inativação preserva referências. Alterações exigem justificativa e geram auditoria; edição desatualizada exige reabrir o registro.
+
+Os valores são dados da instalação separada de cada empresa. Não há condição fixa por nome de empresa/serviço, concessão automática por equipe/N1–N3, algoritmo de SLA ou encaminhamento operacional antecipado. Unidades, cidades, setores, pessoas e referências devem ser preenchidos pelo operador com dados fictícios no piloto; dados corporativos exigem autorização posterior.

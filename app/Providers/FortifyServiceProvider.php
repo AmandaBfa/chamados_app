@@ -58,7 +58,7 @@ class FortifyServiceProvider extends ServiceProvider
         ]);
         RateLimiter::for('two-factor', fn (Request $r) => Limit::perMinute(5)->by('mfa:'.$r->session()->get('login.id', $r->ip())));
         RateLimiter::for('access-sensitive', fn (Request $r) => Limit::perMinute(5)->by('sensitive:'.($r->user()?->id ?? $r->ip())));
-        foreach (['users.view', 'users.create', 'users.update', 'roles.assign'] as $ability) {
+        foreach (['users.view', 'users.create', 'users.update', 'roles.assign', 'catalogs.manage'] as $ability) {
             Gate::define($ability, function (User $user) {
                 return $user->active && $user->hasVerifiedEmail() && $user->hasRole(RoleName::Administrator) &&
                     $user->hasEnabledTwoFactorAuthentication() && session('mfa.user_id') === $user->id &&

@@ -1,6 +1,6 @@
-# Permissões — etapa 2
+# Permissões — etapas 2 e 3
 
-Estado: implementado para autenticação/administração mínima. Perfis definidos pela especificação; parâmetros técnicos de segurança registrados como escolhas de desenvolvimento/piloto, sujeitos à homologação. Não modifica docs/especificacao.md.
+Estado: implementado para autenticação, administração de acesso e cadastros. Perfis definidos pela especificação; parâmetros técnicos de segurança registrados como escolhas de desenvolvimento/piloto, sujeitos à homologação. Não modifica docs/especificacao.md.
 
 ## Regras implementadas
 
@@ -15,12 +15,13 @@ O catálogo contém colaborador, jovem aprendiz, suporte, analistas, desenvolved
 | users.create — autorizar/reemitir convite | Não | Não | Não | Não | Não | Não | Sim, com senha recentemente confirmada e justificativa |
 | users.update — nome, estado e perfis | Não | Não | Não | Não | Não | Não | Sim, com senha recente e justificativa |
 | roles.assign — conceder/remover perfis | Não | Não | Não | Não | Não | Não | Concessão específica, auditada e com proteção do último administrador |
+| catalogs.manage — listar/buscar/editar/inativar catálogos, membros e organização | Não | Não | Não | Não | Não | Não | Sim, com MFA, senha recente e justificativa nas alterações |
 | Editar/apagar auditoria pela aplicação | Não | Não | Não | Não | Não | Não | Não |
 | Acesso a chamados/anexos/buscas/exports | Não implementado nesta etapa | Não implementado | Não implementado | Não implementado | Não implementado | Não implementado | Não implementado |
 
-As quatro abilities são Gates separados no servidor. Todas exigem conta ativa, e-mail confirmado, perfil administrador, MFA confirmado no cadastro e comprovado na sessão atual, e versão de autenticação válida. As escritas exigem adicionalmente senha confirmada nos últimos 900 segundos. A página e o componente Livewire verificam autorização; AdminUserService repete as verificações em cada operação, inclusive IDs/perfis adulterados no cliente.
+As cinco abilities são Gates separados no servidor. Todas exigem conta ativa, e-mail confirmado, perfil administrador, MFA confirmado no cadastro e comprovado na sessão atual, e versão de autenticação válida. As escritas exigem adicionalmente senha confirmada nos últimos 900 segundos; catálogos também exigem essa confirmação nas leituras administrativas. A página e o componente Livewire verificam autorização; AdminUserService/CatalogService repetem as verificações em cada operação, inclusive IDs/perfis adulterados no cliente.
 
-Unidade/setor/equipes ficam para etapa 3, sem duplicação de cadastros. Nesta etapa o administrador altera nome, estado e perfis; mudança de e-mail não é disponibilizada, para não contornar confirmação/vínculo da identidade.
+Etapa 3 implementa unidade/setor/equipes sem duplicação de cadastros. Administração de acesso mantém nome, estado e perfis; Organização dos usuários só altera unidade/setor/cargo/classificação. Mudança de e-mail não é disponibilizada, para não contornar confirmação/vínculo da identidade. Os dois formulários não trocam implicitamente permissões entre si.
 
 ## MFA e recuperação
 
@@ -55,3 +56,5 @@ Fila operacional comum de suporte/analistas e exceções sensíveis continuam pr
 ## Evidências
 
 tests/Feature/AccessControlTest.php testa todos os seis perfis não administrativos, rótulos de cargo/N3, mount Livewire negado, adulteração de alvo, validação de perfil, ações administrativas positivas, senha recente, último administrador, MFA e revogação. AC03 e AC04 estão associados a esses testes em rastreabilidade.md.
+
+tests/Feature/CatalogTest.php cobre URLs/componentes/serviço negados aos seis perfis comuns, ação Livewire após perda de permissão, Locked contra adulteração de catálogo, whitelist de organização contra alteração de roles/credenciais/estado, equipe/referência sem elevação, membros restritos à equipe e proteção dos vínculos. Escopo de chamados específicos/sensíveis continua reservado às etapas 4/5; specific_assignments_only é dado preparatório, sem implementar ou conceder acesso a chamados.

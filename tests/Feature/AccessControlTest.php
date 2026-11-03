@@ -22,7 +22,9 @@ use Illuminate\Support\Str;
 use Laravel\Fortify\Fortify;
 use Livewire\Livewire;
 use Livewire\Mechanisms\HandleRequests\HandleRequests;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PragmaRX\Google2FA\Google2FA;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\TestCase;
 
 class AccessControlTest extends TestCase
@@ -398,6 +400,57 @@ class AccessControlTest extends TestCase
         $this->assertFalse($admin->hasEnabledTwoFactorAuthentication());
         Notification::assertSentTo($admin, VerifyEmail::class);
         $this->artisan('auth:bootstrap')->assertExitCode(1);
+    }
+
+    public static function invalidBootstrapInputs(): array
+    {
+        return [
+            'confirmation mismatch' => ['admin@example.test', 'Senha-segura-2026!', 'Outra-senha-2026!', 'As duas senhas digitadas não são iguais.'],
+            'short password' => ['admin@example.test', 'abc', 'abc', 'O campo senha deve ter ao menos 12 caracteres.'],
+            'empty password' => ['admin@example.test', '', '', 'A senha ficou vazia.'],
+            'non-test domain' => ['admin@example.com', 'Senha-segura-2026!', 'Senha-segura-2026!', 'O e-mail fictício precisa terminar em .test'],
+        ];
+    }
+
+    #[DataProvider('invalidBootstrapInputs')]
+    public function test_bootstrap_explains_validation_errors_without_showing_passwords(string $email, string $password, string $confirmation, string $expected): void
+    {
+        config(['security.bootstrap_enabled' => true]);
+        $command = $this->artisan('auth:bootstrap')
+            ->expectsQuestion('Nome fictício do administrador', 'Administrador de teste')
+            ->expectsQuestion('E-mail fictício (domínio .test)', $email)
+            ->expectsQuestion('Senha (mínimo 12 caracteres, maiúsculas, minúsculas e números)', $password)
+            ->expectsQuestion('Repita a senha', $confirmation)
+            ->expectsOutputToContain($expected)
+            ->expectsOutputToContain('Nenhuma conta criada.');
+        if ($password !== '') {
+            $command->doesntExpectOutputToContain($password);
+        }
+        if ($confirmation !== '' && $confirmation !== $password) {
+            $command->doesntExpectOutputToContain($confirmation);
+        }
+        $command->assertExitCode(1);
+        $this->assertDatabaseMissing('users', ['email' => $email]);
+        Notification::assertNothingSent();
+    }
+
+    public function test_bootstrap_reports_created_account_when_local_mail_is_unavailable(): void
+    {
+        config(['security.bootstrap_enabled' => true]);
+        Notification::shouldReceive('send')->once()->andThrow(new TransportException('SMTP indisponível no teste'));
+        $this->artisan('auth:bootstrap')
+            ->expectsQuestion('Nome fictício do administrador', 'Administrador de teste')
+            ->expectsQuestion('E-mail fictício (domínio .test)', 'smtp-admin@example.test')
+            ->expectsQuestion('Senha (mínimo 12 caracteres, maiúsculas, minúsculas e números)', 'Senha-ficticia-2026!')
+            ->expectsQuestion('Repita a senha', 'Senha-ficticia-2026!')
+            ->expectsOutputToContain('A conta foi criada, mas não foi possível enviar o e-mail de confirmação.')
+            ->expectsOutputToContain('Não repita o cadastro.')
+            ->doesntExpectOutputToContain('Senha-ficticia-2026!')
+            ->assertExitCode(1);
+        $admin = User::where('email', 'smtp-admin@example.test')->firstOrFail();
+        $this->assertTrue($admin->hasRole(RoleName::Administrator));
+        $this->assertFalse($admin->hasVerifiedEmail());
+        $this->assertTrue(Hash::check('Senha-ficticia-2026!', $admin->password));
     }
 
     public function test_recovery_code_rotation_requires_mfa_and_invalidates_old_codes(): void

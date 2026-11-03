@@ -1,6 +1,6 @@
 # Modelo de dados proposto
 
-Estado: etapas 1 e 2 implementadas conforme detalhamento abaixo; entidades das etapas 3–7 continuam propostas técnicas e não constituem política corporativa aprovada. A especificação original permanece em especificacao.md. Uma instalação/banco por empresa; não haverá tenant_id nem autorização transversal.
+Estado: etapas 1, 2 e 3 implementadas conforme detalhamento abaixo; entidades das etapas 4–7 continuam propostas técnicas e não constituem política corporativa aprovada. A especificação original permanece em especificacao.md. Uma instalação/banco por empresa; não haverá tenant_id nem autorização transversal.
 
 ## Fundação implementada
 
@@ -52,3 +52,25 @@ Migração incremental 2026_10_30_000001_create_identity_and_access_tables, sem 
 Escolha técnica: credencial local em users.password em lugar de local_credentials evita provider de autenticação próprio. Não altera a separação de usuário/identidade externa. A matriz em permissoes.md documenta Gates atuais; não há tabela de permissões editáveis ou permissão universal de leitura de chamados.
 
 Convite confirma e-mail na aceitação por posse do token enviado ao endereço autorizado. Cadastro inicial local por console usa confirmação assinada separada. Reset usa broker oficial e incrementa auth_version. Sessões antigas não retornam após reativação. Unidade/setor/equipes ficam para etapa 3, sem tabelas duplicadas. Demais tabelas acima são o planejamento das próximas etapas, não funcionalidades já migradas.
+
+## Estrutura efetivamente implementada na etapa 3
+
+Migração incremental 2026_11_03_000001_create_organization_and_catalog_tables aplicada em chamados_dev e chamados_test. Seções anteriores registram também o estado histórico das etapas 1/2; a tabela abaixo define o estado atual dos cadastros. Não há tenant_id, chamados, SLA ou aprovações.
+
+| Tabela | Campos/relações e restrições |
+|---|---|
+| units | id, name UNIQUE, city obrigatório; active, version, seed_key nullable UNIQUE e timestamps |
+| departments | id, name UNIQUE; active, version, seed_key nullable UNIQUE e timestamps; independente de unidade |
+| teams | id, name UNIQUE; reference_user_id/substitute_user_id FKs restritivas users; specific_assignments_only, triage_coverage, critical_alternative; active/version/seed_key/timestamps |
+| team_members | id; FKs restritivas team_id/user_id; UNIQUE(team_id,user_id); active/version/timestamps; sem função/perfil de acesso |
+| categories | id, name UNIQUE, active/version/seed_key/timestamps |
+| subcategories | id, category_id NOT NULL FK restritiva; UNIQUE(category_id,name), UNIQUE(category_id,id) para FK composta; active/version/seed_key/timestamps |
+| services | id, name UNIQUE; category_id FK restritiva opcional, subcategory_id opcional com FK composta (category_id,subcategory_id) e CHECK exigindo categoria quando houver subcategoria; team_id/reference_user_id FKs restritivas opcionais; supplier textual; proposed_criticality nullable com CHECK baixa/normal/alta/critica; active/version/seed_key/timestamps |
+| equipment_references | id, name UNIQUE, identifier opcional, unit_id FK restritiva opcional; active/version/seed_key/timestamps; somente referência simples |
+| users (extensão) | unit_id e department_id FKs restritivas opcionais; organization_version; reutiliza job_title/support_level já existentes, sem mudar significado de roles/auth_version |
+
+Índices atuais: nomes únicos (subcategoria única dentro da categoria), seed_key único por tabela importável, active nos catálogos/membros, UNIQUE de membresia e índice (user_id,active). O índice composto (category_id,id) suporta integridade categoria/subcategoria. Não se alegou otimização por EXPLAIN/carga; índices operacionais de chamados serão definidos nas etapas futuras.
+
+Regras transacionais complementares: referência/substituto deve pertencer à equipe; serviço só referencia membro da equipe padrão; impedir inativação/movimentação de membro referenciado; revalidar pais na reativação; registros inativos não entram em novos vínculos; subcategoria utilizada não é movida de pai. Esses controles usam CatalogService e serialização de catálogo, além das FKs/CHECKs do banco. Sem exclusão pela interface e sem alteração das migrações aplicadas.
+
+Dados persistidos no desenvolvimento após seed repetido: 5 equipes, 11 categorias, 41 subcategorias, 16 serviços. Unidades, setores e membros permanecem vazios, para preenchimento fictício autorizado pelo operador. Serviços iniciam sem roteamento, pessoa ou criticidade inventados. Demais configurações da instalação seguem em config/installation.php/.env e nos próprios dados dos catálogos; installation_settings não foi necessária nesta etapa e permanece apenas proposta, sem tabela criada.

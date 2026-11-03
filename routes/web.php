@@ -4,6 +4,7 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MfaChallengeController;
 use App\Http\Controllers\PasswordRecoveryController;
 use App\Http\Controllers\SecurityController;
+use App\Services\CatalogDefinition;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers as Fortify;
 
@@ -43,5 +44,10 @@ Route::middleware('auth')->group(function () {
         });
         Route::view('/administracao/usuarios', 'admin.users')
             ->middleware(['admin.mfa', 'can:users.view', 'password.confirm'])->name('admin.users');
+        Route::get('/administracao/cadastros/{kind}', function (string $kind) {
+            CatalogDefinition::get($kind);
+
+            return view('admin.catalogs', compact('kind'));
+        })->middleware(['admin.mfa', 'can:catalogs.manage', 'password.confirm'])->name('admin.catalogs');
     });
 });

@@ -19,6 +19,7 @@
     </section>
     <section class="panel" aria-labelledby="users-title">
         <h2 id="users-title">Usuários cadastrados</h2>
+        @can('catalogs.manage')<p class="mt-3"><a class="text-link" href="{{ route('admin.catalogs', 'users') }}">Editar unidade, setor, cargo e classificação dos usuários</a></p>@endcan
         <ul class="mt-5 divide-y divide-slate-200 dark:divide-slate-700">
             @foreach($users as $user)
                 <li wire:key="user-{{ $user->id }}" class="flex flex-wrap items-center justify-between gap-4 py-4">

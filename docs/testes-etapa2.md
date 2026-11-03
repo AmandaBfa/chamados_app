@@ -39,3 +39,11 @@ AccessControlTest verifica banco/conexão PostgreSQL reais antes de iniciar tran
 ## Limites da validação
 
 Os fluxos completos foram exercitados por testes HTTP/Livewire com PostgreSQL. No navegador, login foi conferido em desktop/390 px, ambos os temas, persistência e foco de teclado. Não foi provisionada uma conta humana com senha do operador durante o trabalho; criação inicial é intencionalmente interativa. Teste em celular físico, revisão completa por leitor de tela e recuperação de perda total de MFA dependem de homologação/procedimento operacional.
+
+Se auth:bootstrap recusar os dados, leia os motivos específicos exibidos (por exemplo senha curta, confirmação diferente, senha vazia ou e-mail já cadastrado), corrija e execute novamente. Nenhuma conta é criada em caso de validação inválida. Não compartilhe senha nem a confirmação pelo chat; basta a mensagem de erro.
+
+Se ocorrer erro de conexão com 127.0.0.1:1025 depois de informar senha válida, a conta pode já ter sido criada. Não excluir usuário ou repetir cadastro. Iniciar Mailpit com & '.\scripts\iniciar-mailpit.ps1', entrar no sistema com a senha criada e usar Reenviar confirmação. O comando mostra esse estado explicitamente em falha de transporte. Após cadastrar, manter AUTH_BOOTSTRAP_ENABLED=false.
+
+## Conclusão informada pelo operador — 03/11/2026
+
+Usuário confirmou a finalização dos testes manuais da etapa 2. Conta inicial criada e e-mail/MFA confirmados; acesso administrativo declarado funcionando após relato transitório de 403. Este registro reflete o retorno do usuário e não substitui evidência individual de cada cenário nem homologação em dispositivo físico/leitor de tela/produção. Não houve alteração de credenciais, permissões ou código para registrar esse retorno.

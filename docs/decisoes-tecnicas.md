@@ -97,3 +97,35 @@ Incremental 2026_10_30_000001_create_identity_and_access_tables aplicada em cham
 Testes HTTP/Livewire usam PostgreSQL dedicado com transações revertidas, sem limpeza destrutiva; identidade real current_database/current_user verificada antes de escrita e DB_URL forçado vazio. Cobrem perfis, MFA, tokens, desativação, sessões e auditoria. SMTP dos três fluxos exercitado no Mailpit com usuário fictício de teste em transação/rollback; primeira inspeção revelou dois assuntos do framework em inglês, corrigidos e reconfirmados em português. Nenhum link/token foi exposto no relatório.
 
 UI de login conferida no navegador em desktop e 390x844, foco de Tab, tema claro/escuro e persistência. Fluxos autenticados completos foram testados por HTTP/Livewire; a conta humana inicial e confirmação com aplicativo pessoal continuam ações interativas do operador. Teste em dispositivo físico e leitor de tela completo ficam para homologação. AC01/AC02 não concluídos; AC03/AC04 têm evidências em AccessControlTest.
+
+## Etapa 3 — cadastros e organização (03/11/2026)
+
+### Requisitos implementados
+
+Unidades/cidades, setores, equipes/membros, categorias/subcategorias, serviços, referência simples de equipamento e organização dos usuários. Nenhuma nova dependência. Mantidos instalação/banco por empresa, tecnologias e migrações anteriores. Sem alterar especificacao.md, cujo SHA-256 permanece igual ao original.
+
+CatalogDefinition mantém uma lista fechada de tabelas/campos. CatalogService autoriza `catalogs.manage` em toda alteração, exige senha recente e valida dados no servidor; o Gate usa o mesmo requisito explícito de Administrador ativo/verificado com MFA comprovado e versão de sessão vigente. CatalogPanel autoriza também buscas/renderização, edição e novo formulário; kind/selectedId/version são Locked. Rotas exigem autenticação, verificação, MFA, Gate e senha recente. Não existem exportações/anexos nesta etapa.
+
+Organização dos usuários só permite unidade, setor, cargo e classificação interna. Não aceita alterar perfis, estado da conta, credenciais ou auth_version; os fluxos da etapa 2 continuam responsáveis por acesso. Membro de equipe, referência/substituto ou cargo N1/N2/N3 não concede permissão. Relações Eloquent teams()/members() incluem vínculos históricos: futuros consumidores deverão considerar estado do usuário/equipe/pivot e autorização específica, nunca derivar acesso de mera existência do vínculo.
+
+### Propostas técnicas de desenvolvimento/piloto
+
+- Setores são cadastros independentes de unidade, pois não foi definida exclusividade entre esses conceitos. Unidade guarda nome e cidade textual; sem geocodificação ou inventário patrimonial.
+- Unidades/setores dos usuários existentes permanecem nulos até preenchimento administrativo. Não inventar cidades, pessoas ou 90 colaboradores. Usuário tem identificador interno estável da etapa 2.
+- Equipes armazenam referência, substituto, cobertura manual de triagem, alternativa para críticos e indicação de encaminhamentos específicos. Quatro equipes iniciais mais Desenvolvimento; Redes inicia como alternativa para críticos, sem pessoa inventada. Não há escala, atribuição automática ou concessão de leitura de chamados.
+- Referência e substituto devem ser membros ativos distintos da própria equipe; referência de serviço deve integrar a equipe padrão. Trocar equipe limpa referência no formulário. Remover/inativar/mover membro usado como referência exige substituir primeiro as referências, inclusive em serviços inativos, preservando a integridade dos vínculos.
+- Inativação conserva relações. Novos vínculos exigem itens ativos e, para subcategoria, categoria ativa. Reativação também revalida pais. Vínculo inativo já existente continua disponível somente no formulário do registro que o utiliza; não é oferecido para outros registros. Desativar usuário não apaga membresia ou autoria; futuros atendimentos precisam revisar atribuições conforme a especificação.
+- Subcategoria usada em serviço não pode mudar de categoria; criar outra para preservar referências. FK composta em services assegura categoria/subcategoria inclusive contra SQL direto. Campos nullable permitem serviço não classificado. Solus inicia sem criticidade; os valores baixa/normal/alta/critica são propostas descritivas de piloto, sem cálculo/alteração de prioridade ou SLA.
+- Fornecedor é referência textual por serviço, suficiente nesta fase; protocolos e esperas ficam para atendimento. Seis exemplos configuráveis de infraestrutura: Internet, Wi-Fi, Rede cabeada, VPN, Pastas de rede e Impressão. Equipe/referência/categoria dos serviços ficam sem preenchimento automático para não inventar roteamento.
+- Auditoria na mesma transação, com ator, catálogo/ID, motivo e antes/depois limitados aos campos permitidos. Sem senhas, tokens ou segredos. Não há exclusão operacional.
+- version e organization_version rejeitam edição desatualizada com erro visível. Advisory lock transacional PostgreSQL 73003 serializa as alterações administrativas dos catálogos e seed; locks de linha protegem registros/relações. Essa escolha privilegia simplicidade no porte previsto; não é evidência de AC15 para futuros chamados nem benchmark de carga.
+
+### Regra do seed
+
+InitialCatalogSeeder importa os nomes da seção 8 sem normalizar capitalização. Chaves seed_key fixas e únicas identificam registros importados. Encontrada a chave, o seed não altera nenhum campo, não reativa nem recria nome personalizado. Nome manual conflitante sem a chave interrompe toda a transação; não adota/sobrescreve cadastro manual. Exclusão direta/alteração de seed_key não é operação suportada. DatabaseSeeder chama esse seed e não cria contas.
+
+### Fontes, verificações e pendências
+
+APIs conferidas no código instalado e em documentação oficial: [Laravel 13 — migrações](https://laravel.com/framework/docs/13.x/migrations), [Livewire 4 — Locked](https://livewire.laravel.com/docs/4.x/attribute-locked) e [PostgreSQL 18 — SQLSTATE](https://www.postgresql.org/docs/18/errcodes-appendix.html). A URL inicial /docs/4.x/locked redirecionou a Quickstart; a referência Locked foi aberta pelo link oficial. PostgreSQL pode retornar 23001 (restrict_violation) ao proteger exclusão, além de 23503 (foreign_key_violation); teste ajustado após observar a restrição efetiva, sem retirar a proteção.
+
+Regressão final: 48 testes/572 assertions aprovados. Migração incremental aplicada nos dois bancos locais, seed repetido em chamados_dev sem duplicação; build/Pint/cache de views aprovados. Evidências em progresso.md. Roteiro humano em testes-etapa3.md. Criticidade final, pessoas de referência, cobertura por período e políticas corporativas seguem pendentes; nenhuma política de acesso/SLA/indicador nova foi inferida. O fluxo de chamados deverá implementar autorização própria na etapa correspondente, incluindo encaminhamento específico e sensíveis.
