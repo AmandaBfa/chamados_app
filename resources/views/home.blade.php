@@ -2,8 +2,10 @@
     <section class="panel">
         <p class="eyebrow">Acesso confirmado</p>
         <h1 class="mt-2">Olá, {{ auth()->user()->name }}</h1>
-        <p class="muted mt-4">Sua conta está autenticada. A abertura e o atendimento de chamados serão disponibilizados nas próximas etapas.</p>
+        <p class="muted mt-4">Relate um problema e acompanhe seus chamados.</p>
         <nav aria-label="Opções da conta" class="mt-6 flex flex-wrap gap-4">
+            <a class="primary" href="{{ route('portal.open') }}">Abrir chamado</a>
+            <a class="secondary" href="{{ route('portal.index') }}">Meus chamados</a>
             @can('catalogs.manage')<a class="primary" href="{{ route('admin.catalogs', 'units') }}">Cadastros e organização</a>@endcan
             @can('users.view')<a class="primary" href="{{ route('admin.users') }}">Administrar usuários</a>@endcan
             @if(auth()->user()->hasRole(\App\Enums\RoleName::Administrator) || auth()->user()->hasEnabledTwoFactorAuthentication())

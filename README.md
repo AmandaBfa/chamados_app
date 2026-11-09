@@ -1,6 +1,6 @@
 # Sistema de chamados de TI
 
-Etapas 1, 2 e 3: fundação, autenticação local, administração e cadastros. Laravel 13.39.0, Livewire 4.4.8, Tailwind 4.3.3, Vite 7.3.7, Fortify 1.41.0 e PostgreSQL. Não há cadastro público, integração Microsoft ou módulos de chamados/SLA implementados.
+Etapas 1–4: fundação, autenticação local, administração, cadastros e portal pessoal de chamados. Laravel 13.39.0, Livewire 4.4.8, Tailwind 4.3.3, Vite 7.3.7, Fortify 1.41.0 e PostgreSQL. Não há cadastro público, integração Microsoft, atendimento técnico ou motor de SLA implementados.
 
 ## Ambiente
 
@@ -137,7 +137,7 @@ php artisan route:list
 
 A suíte Feature agora exige PostgreSQL de testes migrado. Os testes que escrevem usam transações com rollback e verificam a identidade real do banco chamados_test antes de escrever. DB_URL é forçado vazio nos testes. Não há limpeza destrutiva de banco.
 
-Roteiros de teste humano: docs/testes-etapa2.md e docs/testes-etapa3.md. Evidências/resultados reais: docs/progresso.md. Regressão em 03/11/2026: 48 testes/572 assertions aprovados. Se Git avisar sobre ownership, usar exceção apenas por comando: git -c safe.directory=C:/laragon/www/Sistema_de_chamado status.
+Roteiros de teste humano: docs/testes-etapa2.md, docs/testes-etapa3.md e docs/testes-etapa4.md. Evidências/resultados reais: docs/progresso.md. Regressão final da etapa 4 em 03/11/2026: 73 testes/964 assertions aprovados. Se Git avisar sobre ownership, usar exceção apenas por comando: git -c safe.directory=C:/laragon/www/Sistema_de_chamado status.
 
 ## Continuidade
 
@@ -148,7 +148,7 @@ Roteiros de teste humano: docs/testes-etapa2.md e docs/testes-etapa3.md. Evidên
 - docs/rastreabilidade.md: AC03/AC04 com evidência; AC01/AC02 permanecem pendentes.
 - docs/progresso.md: estados, comandos, resultados e limitações.
 
-Próxima etapa somente após nova solicitação: portal do colaborador (abertura, próprios chamados, conversa pública e anexos). Nenhum push, publicação, Microsoft ou alteração de rede corporativa foi realizado.
+Próxima etapa somente após nova solicitação: atendimento do TI (fila, atribuição, notas internas e transições). Na etapa 4 não houve push, publicação, Microsoft ou alteração de rede corporativa. O envio da etapa 3 ao GitHub foi autorizado separadamente e permanece no histórico.
 
 ## Cadastros e organização — etapa 3
 
@@ -167,3 +167,17 @@ Cadastrar unidade/cidade e setor; vincular usuários em Organização dos usuár
 O seed usa seed_key estável: repetição não atualiza registros existentes, nomes alterados, inativação ou personalizações. Conflito com nome de cadastro manual aborta toda a transação; resolver o conflito explicitamente antes de repetir, sem adotar/sobrescrever registros manuais. Não apagar nem alterar seed_key diretamente. Não há exclusão operacional; inativação preserva referências. Alterações exigem justificativa e geram auditoria; edição desatualizada exige reabrir o registro.
 
 Os valores são dados da instalação separada de cada empresa. Não há condição fixa por nome de empresa/serviço, concessão automática por equipe/N1–N3, algoritmo de SLA ou encaminhamento operacional antecipado. Unidades, cidades, setores, pessoas e referências devem ser preenchidos pelo operador com dados fictícios no piloto; dados corporativos exigem autorização posterior.
+
+## Portal pessoal — etapa 4
+
+Migração incremental 2026_11_03_000002 aplicada nesta instalação local e em testes, sem recriar bancos. Em cópia nova, usar os comandos de migração já descritos; não executar fresh/refresh/rollback no banco existente.
+
+Entrar com conta autorizada, e-mail confirmado e MFA se administrador; no início, escolher **Abrir chamado** ou **Meus chamados**. Rotas: /chamados/abrir, /meus-chamados e /meus-chamados/{id}. Todos os sete perfis podem relatar problemas próprios, conforme decisão explícita do usuário; administrador também vê somente seus chamados neste portal. Chamados/anexos alheios retornam 404. Atendimento técnico é etapa futura, sem acesso operacional implícito por equipe ou perfil.
+
+Abertura usa solicitante e contexto de unidade/setor do cadastro, categoria/subcategoria dependentes, serviço/equipamento opcionais, descrição, abrangência/processo afetado, condição de trabalho e início aproximado ou desconhecido. Confirmação mostra protocolo único; o mesmo envio é idempotente inclusive sob concorrência. Prioridade começa nula, sem escolha P1/P2 ou prazos calculados. Detalhe oferece conversa/histórico públicos e downloads privados; notas internas não integram as consultas/respostas do portal.
+
+Limites em config/tickets.php: até cinco anexos por abertura/comentário, 10 MB cada, PNG/JPEG/PDF simples/TXT UTF-8. Upload temporário autenticado, vinculado ao usuário, válido por 24 h e de uso único; conteúdo é revalidado ao salvar. Arquivos em storage/app/private/tickets, sem storage:link ou URLs públicas; download autorizado e forçado como arquivo. PDF com indicadores ativos, formulários, criptografia ou objetos comprimidos é recusado conservadoramente. **Não há scanner antivírus nem sanitizador completo de PDF**; análise antimalware, retenção, reconciliação de órfãos e backups de anexos dependem de homologação antes da produção.
+
+Os testes de upload usam discos fictícios separados por processo; testes de escrita usam chamados_test com rollback. O ensaio de concorrência com dois processos precisa de fixtures temporariamente gravadas com commit nesse banco para serem compartilhadas; finally remove exclusivamente os IDs fictícios criados pelo ensaio. Não rodar o worker manualmente nem apontá-lo a outro banco. Não há envio de e-mail na abertura/comentário, exportações, atendimento/SLA ou automações de negócio nesta etapa.
+
+Validação funcional por HTTP, Livewire e PostgreSQL. A revalidação de 09/11/2026 aprovou 73 testes e 967 asserções. Teclado, tela reduzida, celular físico e leitor de tela ainda precisam ser verificados pelo roteiro em docs/testes-etapa4.md. A etapa está concluída para desenvolvimento e piloto, com homologação visual e autorização de produção pendentes.

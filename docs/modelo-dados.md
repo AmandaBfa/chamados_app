@@ -1,10 +1,10 @@
 # Modelo de dados proposto
 
-Estado: etapas 1, 2 e 3 implementadas conforme detalhamento abaixo; entidades das etapas 4–7 continuam propostas técnicas e não constituem política corporativa aprovada. A especificação original permanece em especificacao.md. Uma instalação/banco por empresa; não haverá tenant_id nem autorização transversal.
+Estado: etapas 1–4 implementadas conforme detalhamento abaixo; atendimento, ciclos/relógios de SLA e alertas das etapas 5–7 continuam propostas técnicas e não constituem política corporativa aprovada. A especificação original permanece em especificacao.md. Uma instalação/banco por empresa; não haverá tenant_id nem autorização transversal.
 
 ## Fundação implementada
 
-Fundação: cache, cache_locks, jobs, job_batches e failed_jobs. Etapa 2 acrescentou usuários, perfis, vínculo de perfis, identidades externas reservadas, convites, recuperação, sessões e auditoria. Sessões locais agora usam banco. Nenhuma tabela de chamados/SLA foi implementada.
+Fundação: cache, cache_locks, jobs, job_batches e failed_jobs. Etapa 2 acrescentou identidade/acesso; etapa 3, organização/catálogos; etapa 4, chamados, comentários, anexos e eventos. Sessões locais usam banco. Não há tabelas/cálculo de SLA implementados.
 
 ## Entidades, relações e restrições planejadas
 
@@ -74,3 +74,23 @@ Migração incremental 2026_11_03_000001_create_organization_and_catalog_tables 
 Regras transacionais complementares: referência/substituto deve pertencer à equipe; serviço só referencia membro da equipe padrão; impedir inativação/movimentação de membro referenciado; revalidar pais na reativação; registros inativos não entram em novos vínculos; subcategoria utilizada não é movida de pai. Esses controles usam CatalogService e serialização de catálogo, além das FKs/CHECKs do banco. Sem exclusão pela interface e sem alteração das migrações aplicadas.
 
 Dados persistidos no desenvolvimento após seed repetido: 5 equipes, 11 categorias, 41 subcategorias, 16 serviços. Unidades, setores e membros permanecem vazios, para preenchimento fictício autorizado pelo operador. Serviços iniciam sem roteamento, pessoa ou criticidade inventados. Demais configurações da instalação seguem em config/installation.php/.env e nos próprios dados dos catálogos; installation_settings não foi necessária nesta etapa e permanece apenas proposta, sem tabela criada.
+
+## Estrutura efetivamente implementada na etapa 4
+
+Migração incremental 2026_11_03_000002_create_requester_portal_tables aplicada nos dois bancos locais; preservadas todas as migrações anteriores. Sem seed de chamados, contas ou arquivos reais. Os estados anteriores descritos neste documento permanecem como histórico.
+
+| Tabela | Relações e garantias |
+|---|---|
+| tickets | ID interno, protocol UNIQUE, requester_id FK restritiva users; idempotency_key UUID com UNIQUE(requester_id,idempotency_key); unit_id/department_id FKs opcionais e opening_context JSONB com nomes/cidade da abertura; type CHECK incidente/solicitacao (portal só cria incidente); subject/description; categoria obrigatória e FK composta (category_id,subcategory_id); serviço/equipamento opcionais com FKs restritivas; impact_scope, affected_process, work_condition; started_unknown/started_at com CHECK coerente; status CHECK, priority nullable CHECK P1–P4, lock_version, timestamps UTC |
+| comments | FKs ticket/author restritivas; body, visibility CHECK public/internal; chave UUID e UNIQUE(ticket_id,author_id,idempotency_key); UNIQUE(ticket_id,id) para referência composta; timestamps UTC |
+| attachments | FKs ticket/uploader restritivas; comment_id opcional com FK composta (ticket_id,comment_id), impedindo comentário de outro chamado; visibility public/internal; storage_key UNIQUE aleatória e privada; download_name seguro, MIME detectado, size, sha256 e timestamps. Caminho não é enviado ao cliente |
+| ticket_events | FKs ticket/actor restritivas; event_type, visibility public/internal, public_summary opcional, details JSONB e occurred_at UTC; sem API de alteração/exclusão |
+| temporary_upload_receipts | path_hash SHA-256 como PK (nome temporário canônico), FK usuário, expires_at indexado e consumed_at; comprova propriedade/validade/uso único do upload temporário, sem guardar conteúdo ou nome original |
+
+Índices: tickets(requester_id,created_at,id), tickets(requester_id,status); comments(ticket_id,visibility,id); attachments(ticket_id,visibility,comment_id); ticket_events(ticket_id,visibility,id), além de PKs/UNIQUEs/FKs compostas. Não houve benchmark ou alegação de otimização por EXPLAIN.
+
+Criação serializada pelo lock transacional de catálogos 73003 e pelo usuário bloqueado; a chave única é defesa adicional contra duplo envio. Comentários serializam pela linha do chamado. Ticket/evento/anexos/consumo de recibos são gravados na mesma transação; falha remove cópias privadas recém-escritas e reverte metadados. Arquivos e PostgreSQL não formam uma transação distribuída: queda abrupta do processo pode deixar órfãos privados, exigindo procedimento de reconciliação antes de produção; não foi inventada rotina automática de descarte.
+
+Snapshots de unidade/setor não se recalculam quando o usuário/cadastro muda. Itens inativados continuam legíveis nos chamados antigos. Reparentear subcategoria usada em tickets é bloqueado no serviço administrativo, além da FK. Serviço configurado com categoria/subcategoria deve ser compatível; serviço sem classificação é opcional. Campos nulos do cadastro organizacional ficam explícitos como não informados, sem bloquear acesso com regra nova não definida.
+
+Compatibilidade com SLA futuro: abertura persistida em created_at e evento ticket.opened com ator/instante; tipo, prioridade nullable, lock_version e eventos não exigem prazo calculado nem ciclo simulado. Etapas 5/6 poderão acrescentar responsáveis, ciclos, versões de políticas/calendários e referências de ciclo aos eventos por migrações novas. Não há relógio contado por comentários nem inferência de P1 pelo nome Solus.

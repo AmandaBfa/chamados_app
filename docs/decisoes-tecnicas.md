@@ -1,5 +1,7 @@
 # Decisões técnicas — etapa 1
 
+**Revalidação da etapa 4 em 09/11/2026.** A abertura exige data aproximada para todos os valores booleanos aceitos pelo servidor que representem início conhecido. O caso textual `0` é exercitado via Livewire. A seção 7 da especificação prevê sinalização imediata de suspeita crítica. O portal registra abrangência, processo e condição de trabalho. A sinalização operacional depende de critérios e rota de triagem definidos.
+
 Registro de 29/10/2026. Não altera decisões da especificação. Fontes oficiais consultadas por navegação; versões exatas resolvidas nos lockfiles, sem pré-lançamentos.
 
 ## Ambiente e versões
@@ -129,3 +131,37 @@ InitialCatalogSeeder importa os nomes da seção 8 sem normalizar capitalizaçã
 APIs conferidas no código instalado e em documentação oficial: [Laravel 13 — migrações](https://laravel.com/framework/docs/13.x/migrations), [Livewire 4 — Locked](https://livewire.laravel.com/docs/4.x/attribute-locked) e [PostgreSQL 18 — SQLSTATE](https://www.postgresql.org/docs/18/errcodes-appendix.html). A URL inicial /docs/4.x/locked redirecionou a Quickstart; a referência Locked foi aberta pelo link oficial. PostgreSQL pode retornar 23001 (restrict_violation) ao proteger exclusão, além de 23503 (foreign_key_violation); teste ajustado após observar a restrição efetiva, sem retirar a proteção.
 
 Regressão final: 48 testes/572 assertions aprovados. Migração incremental aplicada nos dois bancos locais, seed repetido em chamados_dev sem duplicação; build/Pint/cache de views aprovados. Evidências em progresso.md. Roteiro humano em testes-etapa3.md. Criticidade final, pessoas de referência, cobertura por período e políticas corporativas seguem pendentes; nenhuma política de acesso/SLA/indicador nova foi inferida. O fluxo de chamados deverá implementar autorização própria na etapa correspondente, incluindo encaminhamento específico e sensíveis.
+
+## Etapa 4 — portal pessoal e abertura (03/11/2026)
+
+### Decisão de acesso confirmada pelo usuário
+
+Perguntado se o portal pessoal seria exclusivo do perfil Colaborador ou disponível também aos demais perfis, o usuário escolheu explicitamente: **todos os usuários internos ativos, incluindo TI e administrador**. Esta decisão vale somente para abrir/consultar/comentar/anexar em chamados próprios, mantendo conta autorizada com credencial local, e-mail confirmado, sessão vigente e MFA administrativo. Não cria leitura global por cargo, equipe, N1/N2/N3 ou perfil Administrador. A especificação original não foi editada; a decisão adicional fica registrada aqui e em permissoes.md.
+
+PortalAccess aplica essas condições em toda consulta/operação, inclusive renderização/busca, ações Livewire e downloads. IDs de componente e chaves de envio são Locked. Solicitante/autor/contexto vêm da sessão/cadastro recarregado, não de campos livres do cliente. Recurso inexistente/alheio retorna 404. Políticas de leitura operacional/sensíveis do TI permanecem para a etapa 5, sem herdar concessão deste portal.
+
+### Dados, validação e consistência
+
+RequesterTickets concentra abertura e comentário público. Formulário em uma coluna, descrição orientada, subcategoria dependente, serviço/equipamento opcionais e início aproximado ou desconhecido. Serviço com categoria/subcategoria configurada deve ser compatível; itens inativos não são oferecidos/aceitos em novas seleções. Itens usados continuam legíveis; alterar o pai de subcategoria usada em tickets é rejeitado no cadastro administrativo. Abertura guarda snapshot de unidade/setor/cidade; ausências do cadastro são explícitas, sem inventar dados ou bloqueio adicional.
+
+Configuração de piloto em config/tickets.php: assunto 160, descrição/comentário 10.000 caracteres, processo afetado 500; até cinco anexos por envio, 10 MB cada. A proposta de limite é aplicada por abertura/comentário, não constitui política corporativa de retenção. Data local interpretada no fuso configurado, segundos zerados e persistência UTC; futuro é rejeitado. Impacto e condição preservam fatos relatados; não classificam P1/P2 nem calculam SLA. Chamado nasce incidente/novo, prioridade nula, sem prazo ou equipe/responsável simulados.
+
+Chave UUID por instância de formulário, UNIQUE(requester_id,idempotency_key), lock transacional de catálogos e usuário bloqueado protegem abertura concorrente. Protocolo CH-ULID com restrição UNIQUE; colisão não sobrescreve registro. Reenvio com a mesma chave retorna o chamado original mesmo após consumo dos uploads, sem repetir anexos/evento. Nova instância do formulário representa nova solicitação; não há deduplicação por textos parecidos. Comentário tem chave própria e serialização pelo ticket. Eventos simples com ator/instante/visibilidade, sem arquitetura de event sourcing; preparação conceitual para adicionar ciclos de SLA por migrações futuras, sem simular ciclos/relógios agora.
+
+Leituras do detalhe projetam DTO com campos explicitamente permitidos. Comentários e eventos internos não são carregados; JSONB de detalhes técnicos nunca é projetado. Anexos exigem visibilidade pública própria e, quando associados a comentário, comentário público do mesmo ticket. A FK composta ticket/comment impede associação cruzada. Ações públicas sempre gravam visibility=public; não existe controle livre de visibilidade no navegador. Não há envio de e-mail ou exportação nesta etapa.
+
+### Arquivos privados
+
+Upload temporário Livewire exige auth/verified/MFA administrativo e limite de frequência. Controller do framework é substituído via container por PortalTemporaryUploadController, preservando assinatura de URL e armazenamento do pacote; ações de início/finalização/remoção também autorizam no servidor. Recibo de hash canônico comprova dono, validade de 24 h e uso único. Não basta possuir ID, nome ou referência assinada de outro usuário. Discos de teste são isolados por processo; produção continua no disco local privado.
+
+Validação no endpoint temporário e novamente no salvamento: quantidade/tamanho, bytes reais, MIME detectado por finfo, extensão compatível, dimensões de imagem válidas e TXT UTF-8 sem controles binários. PDF precisa de cabeçalho/final reconhecíveis; filtro conservador rejeita indicadores de ações/script, anexos embutidos, formulários, objetos comprimidos e criptografia, inclusive nomes PDF escapados com #hex. Esse filtro **não é scanner antivírus, sanitizador ou parser completo de PDF**; arquivos complexos podem ser recusados e não há garantia antimalware. Avaliar mecanismo de análise e procedimento operacional na homologação antes de dados reais. Não habilitar formatos ativos sem decisão específica de segurança.
+
+Arquivos finais usam chave aleatória em storage/app/private/tickets, nome de download ASCII sanitizado e MIME/tamanho/SHA-256 persistidos. Somente rota autenticada verifica solicitante, ticket, anexo e visibilidade; download forçado como application/octet-stream, nosniff e sandbox, sem HTML inline. Pré-visualização temporária Livewire foi desabilitada; nenhum caminho público ou storage:link foi criado. Em falha, metadados/recibos revertem e cópias privadas recém-escritas são removidas. Queda abrupta pode deixar arquivo órfão; reconciliação/backup/retenção de anexos e recibos dependem de homologação, não foram tratados como políticas corporativas aprovadas. Temporários seguem limpeza de 24 h do pacote; recibos expirados são inutilizáveis, sem rotina de descarte de banco inventada nesta etapa.
+
+### Evidências e limites
+
+Regressão final: **73 testes/964 assertions**, incluindo RequesterPortalTest e TicketConcurrencyTest (dois processos independentes, uma abertura/um evento). Ensaios de arquivos usam bytes reais, não apenas MIME declarado no fake. Testes negam chamados/anexos alheios em GET, ações Livewire, busca e serialização; testam nota interna/arquivo vinculado a nota interna, autor adulterado, inativação, idempotência, rollback de arquivo, revalidação final e sessão revogada. Nenhuma senha administrativa fixa, mensagem real, dependência nova, publicação ou push nesta etapa.
+
+Fontes oficiais consultadas: [Livewire 4 — uploads](https://livewire.laravel.com/docs/4.x/uploads), [Livewire 4 — segurança](https://livewire.laravel.com/docs/4.x/security), [PostgreSQL 18 — locks](https://www.postgresql.org/docs/18/explicit-locking.html) e [Laravel 13 — filesystem/downloads](https://laravel.com/framework/docs/13.x/filesystem#downloading-files). Código instalado de FileUploadController, TemporaryUploadedFile, FileUploadConfiguration, WithFileUploads e FilesystemAdapter também foi inspecionado. A primeira consulta Laravel expirou por timeout; a API instalada foi conferida e a nova consulta à página oficial foi bem-sucedida. Resultados completos das verificações em progresso.md.
+
+Inspeção visual no Edge não executada: autorização da ferramenta de controle expirou antes de controlar a janela. Roteiro humano em testes-etapa4.md, com celular/teclado/leitor de tela ainda a homologar; AC17 permanece parcial. Interface técnica, notificações, anexar por colagem/arraste, exportações, prioridade calculada, SLA e transições ficam fora desta etapa.

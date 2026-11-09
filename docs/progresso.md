@@ -1,6 +1,6 @@
 # Progresso — sistema de chamados de TI
 
-Atualizado em 03/11/2026. Escopo executado: etapas 1, 2 e 3, com resultados e histórico separados abaixo. A documentação original foi lida integralmente e copiada sem alteração para especificacao.md. SHA-256: 7885ee818100b1ac35445e4f39bbcaed2be533f67db9bac9930e4700fc089688.
+Atualizado em 03/11/2026. Escopo executado: etapas 1–4, com resultados e histórico separados abaixo. A documentação original foi lida integralmente e copiada sem alteração para especificacao.md. SHA-256: 7885ee818100b1ac35445e4f39bbcaed2be533f67db9bac9930e4700fc089688.
 
 ## Oito etapas autorizáveis
 
@@ -9,13 +9,13 @@ Atualizado em 03/11/2026. Escopo executado: etapas 1, 2 e 3, com resultados e hi
 | 1. Fundação | Concluída: base, PostgreSQL, assets e captura SMTP validados; testes manuais da tela confirmados pelo usuário | Próxima etapa: autenticação e permissões |
 | 2. Autenticação e permissões | Concluída para desenvolvimento/piloto; 34 testes/385 assertions aprovados | Conta inicial criada pelo operador; testes manuais da etapa 2 concluídos pelo usuário em 03/11/2026 |
 | 3. Cadastros | Concluída para desenvolvimento/piloto em 03/11/2026; regressão 48 testes/572 assertions | Roteiro humano em testes-etapa3.md; etapa 4 somente após nova solicitação |
-| 4. Portal do colaborador | Não iniciada | Abertura idempotente, próprios chamados, conversa pública e anexos autorizados |
+| 4. Portal do colaborador | Concluída para desenvolvimento/piloto, com 73 testes e 967 asserções na revalidação | Roteiro humano/visual em testes-etapa4.md. Etapa 5 somente após nova solicitação |
 | 5. Atendimento do TI | Não iniciada | Fila, atribuição, notas internas, transições, histórico e concorrência |
 | 6. Motor de SLA | Não iniciada | Calendários/versionamento, ciclos, dois relógios, pausas e testes de borda |
 | 7. Alertas e dashboards | Não iniciada | Deduplicação, escalonamento, indicadores e reconciliação por filtros |
 | 8. Homologação e implantação | Não iniciada | Aprovações corporativas, rede/hospedagem, HTTPS, backup/restauração, segurança e piloto |
 
-Esta divisão detalha a sequência da seção 18 da especificação: autenticação/perfis/auditoria foram separados da fundação pelo pedido explícito. Nenhum requisito foi retirado. Etapas 2 e 3 foram solicitadas posteriormente; não avançar para etapa 4 sem nova solicitação.
+Esta divisão detalha a sequência da seção 18 da especificação: autenticação/perfis/auditoria foram separados da fundação pelo pedido explícito. Nenhum requisito foi retirado. Etapas 2–4 foram solicitadas posteriormente; não avançar para etapa 5 sem nova solicitação.
 
 ## Histórico da implementação da fundação
 
@@ -62,7 +62,7 @@ Pendências corporativas da seção 19 continuam válidas e não se tornaram pol
 
 ## Próximo passo
 
-Fundação, autenticação/permissões e cadastros concluídos para desenvolvimento/piloto. Próximo módulo: **portal do colaborador**, somente após nova solicitação. Inicialização humana da conta e roteiros em testes-etapa2.md e testes-etapa3.md. Não há credenciais administrativas fixas, integração Microsoft, rede/VPN, túnel ou implantação nesta entrega.
+Fundação, autenticação/permissões, cadastros e portal pessoal concluídos para desenvolvimento/piloto. Próximo módulo: **atendimento do TI**, somente após nova solicitação. Roteiros em testes-etapa2.md, testes-etapa3.md e testes-etapa4.md. Não há credenciais administrativas fixas, integração Microsoft, rede/VPN, túnel ou implantação nesta entrega.
 
 
 ## Assistente local de configuracao PostgreSQL
@@ -223,3 +223,55 @@ Etapa 3 permanece concluída para desenvolvimento/piloto, agora com conclusão d
 Usuário autorizou o envio desta etapa ao repositório origin, AmandaBfa/chamados_app. Fetch confirmou main sincronizada com origin/main antes do commit. Escopo inclui cadastros, documentação e conclusão manual das etapas 2/3, além das mensagens de validação e tratamento de SMTP do bootstrap corrigidos durante os testes do operador.
 
 Regressão anterior ao envio: `php artisan test --testsuite=Unit,Feature,PostgreSQL` **aprovada: 53 testes/649 assertions**, incluindo cinco casos adicionais do bootstrap. `php vendor/bin/pint --test` e `git diff --check` aprovados. .env, .env.testing, .tools, vendor e node_modules permanecem ignorados; exemplos de ambiente sem chaves/senhas preenchidas. Não há implantação nem avanço para etapa 4. O registro histórico de ausência de autorização de push foi substituído pela solicitação explícita deste envio.
+
+## Etapa 4 — portal pessoal e abertura concluída (03/11/2026)
+
+Revalidação em 09/11/2026: `php artisan test --testsuite=Unit,Feature,PostgreSQL` **aprovado, 73 testes e 967 asserções** no PostgreSQL dedicado `chamados_test`. A primeira tentativa no sandbox falhou na leitura do bootstrap. Uma configuração temporária contornou o bootstrap, mas o sandbox negou a conexão local (10013). A repetição com acesso ao PostgreSQL local usou a configuração original. `php -l` e `php vendor/bin/pint --test app/Services/RequesterTickets.php tests/Feature/RequesterPortalTest.php` aprovados nos PHP alterados. Roteiro visual e por teclado não executado nesta revalidação.
+
+A abertura agora rejeita início conhecido sem data também quando o valor recebido é o texto `0`. A consulta de subcategorias usa um identificador de categoria inteiro, inclusive quando a entrada é adulterada. O modelo de dados permanece aplicável sem nova migração.
+
+Estado: **concluída para desenvolvimento/piloto**, com isolamento funcional comprovado por HTTP/Livewire/PostgreSQL. A homologação visual e humana está pendente (AC17). A etapa 5 aguarda solicitação. A entrega inicial foi local. O usuário autorizou posteriormente o envio do código da etapa 4 ao GitHub.
+
+### Escopo e decisão do usuário
+
+- Portal real com abrir chamado, lista pessoal com busca/filtro/paginação e detalhe com conversa/histórico públicos. Interface pt-BR com rótulos, foco, layout responsivo e tema salvo herdado, sem métricas ou prazos fictícios.
+- Solicitante/autor/contexto obtidos da sessão e cadastro recarregado; snapshot de unidade/setor/cidade, catálogo validado, início aproximado UTC ou desconhecido e estado Novo. Tipo incidente e prioridade nula, sem motor de SLA ou escolha de P1/P2 pelo colaborador.
+- Migração incremental de tickets/comments/attachments/ticket_events/temporary_upload_receipts; FKs restritivas e compostas, CHECKs, UNIQUEs de protocolo/idempotência e índices de consultas pessoais. Modelo de eventos/ciclos conferido antes das tabelas; relógios/ciclos futuros não foram simulados.
+- Abertura transacional com chave por formulário, proteção contra concorrência, um evento inicial com ator/instante e retorno do mesmo protocolo em reenvio. Comentário tem chave própria. Itens históricos inativados continuam legíveis e contexto não muda com o cadastro atual.
+- Upload privado, dono/validade/uso único desde o temporário, quantidade/tamanho/conteúdo/MIME/extensão revalidados ao salvar. Download autenticado verifica ticket/anexo/comentário e força arquivo sem execução inline. Rollback de metadados e limpeza das cópias privadas de envio falho comprovados. Sem scanner antivírus inventado.
+- Notas/eventos/anexos internos excluídos das consultas e DTOs do portal. Administrador não recebe leitura global. Ações Livewire, buscas, envio temporário e downloads autorizados no servidor.
+- Lacuna de acesso foi apresentada ao usuário: escolha explícita de permitir portal pessoal a **todos os usuários internos ativos, incluindo TI e administrador**. Teste dos sete perfis aprovado, mantendo e-mail/sessão válidos e MFA administrativo. Especificação original preservada; decisão registrada em decisões/permissões.
+
+### Comandos e resultados reais
+
+| Verificação / comando | Resultado |
+|---|---|
+| Git/status e instruções locais | Aprovado: árvore limpa no início, sem AGENTS.md aplicável localizado; alterações da etapa 3 preservadas. Sem commit/push nesta etapa |
+| php artisan test --testsuite=Unit,Feature,PostgreSQL antes da implementação | Aprovado: 53 testes/649 assertions, verificando os pré-requisitos de autenticação/cadastros |
+| php artisan migrate --env=testing --no-interaction | Aprovado: somente incremental 2026_11_03_000002 em chamados_test; sem fresh/refresh/limpeza de dados existentes |
+| Identidade por SQL antes da migração local | Aprovado: chamados_dev/chamados_app; testes verificam chamados_test/chamados_test e DB_URL vazio antes de escrita |
+| php artisan migrate --no-interaction | Aprovado: incremental do portal no desenvolvimento; dados anteriores preservados |
+| migrate:status nos dois ambientes | Aprovado: cinco migrações Ran em cada banco |
+| RequesterPortalTest inicial | Falhou: 8 passaram/4 falharam porque endpoint de upload de teste precisava do disco tmp-for-tests inicializado; harness corrigido, sem alterar storage de desenvolvimento |
+| Reexecução após configurar disco de testes | Falhou: comparação do recibo não considerava barra inicial retornada pelo pacote; nome temporário passou a ser normalizado consistentemente, sem retirar checagem de dono/validade/uso único |
+| Reexecução do portal após normalização | Falhou: 11 passaram/1 falhou por RecordNotFoundException do query builder no teste Livewire; ausência/alheio passou a usar abort(404) explícito em portal/download |
+| Regressão intermediária | Aprovada: 66 testes/857 assertions, incluindo ensaio real de concorrência |
+| Casos adicionais de segurança | Aprovados isoladamente: 18 casos de portal/264 assertions; teste dos sete perfis aprovado separadamente (1 caso/40 assertions) |
+| Regressão durante duas execuções sobrepostas | Falhou em uma fixture de arquivo removida pelo fake do outro processo. Corrigido isolamento dos discos fictícios por PID; validação final executada sequencialmente. Nenhum arquivo de desenvolvimento afetado |
+| php artisan test --testsuite=Unit,Feature,PostgreSQL final | **Aprovado: 73 testes/964 assertions**, incluindo 19 casos de portal, todas as etapas anteriores e concorrência |
+| TicketConcurrencyTest | Aprovado: dois processos PHP independentes aguardam barreira e enviam a mesma chave; mesmo ID/protocolo, um chamado e um evento. Fixtures temporariamente persistidas apenas em chamados_test e removidas por seus IDs no finally |
+| npm.cmd run build | Aprovado: CSS 65,31 kB e JS 0,39 kB, Vite 7.3.7 |
+| php vendor/bin/pint e --test final | Aprovados após normalizar imports; uma verificação --test intermediária apontou imports do caso recém-adicionado e foi corrigida |
+| php artisan view:cache / view:clear | Aprovados |
+| Limites PHP CLI observados | upload_max_filesize=2G, post_max_size=2G, max_file_uploads=20; não alterados. Aplicação/Livewire limitam a cinco arquivos de 10 MB; servidor HTTP de produção precisa de conferência própria |
+| Documentação oficial | Livewire uploads/segurança e PostgreSQL locks consultados; Laravel filesystem teve timeout inicial, API instalada inspecionada e consulta repetida com sucesso |
+| Controle visual do Edge | Não executado: autorização da ferramenta expirou antes de controlar a janela. Nenhuma evidência de celular/teclado/leitor de tela do portal foi declarada aprovada |
+| E-mail/dependências/integrações | Nenhum envio real ou dependência nova; testes usam notificações falsas. Sem Microsoft, aprovação Adobe/Teams, rede, implantação ou push |
+
+### Limites e condição para continuidade
+
+Condição técnica de avanço atendida: usuário abre/consulta/comenta/anexa em chamados próprios, com isolamento demonstrado em GET, Livewire, upload, download e DTO; autenticação/cadastros continuam aprovados. AC01/AC02 atendidos **no portal pessoal**, sem alegar políticas operacionais/notificações futuras; AC05/AC06/AC16 têm evidência específica. AC15 parcial pela abertura concorrente; atendimento/SLA pendentes. AC17 parcial até roteiro humano/visual.
+
+Roteiro em testes-etapa4.md. Não há scanner antivírus/parser completo de PDF; filtros conservadores podem rejeitar PDFs complexos. Reconciliação de órfãos após queda abrupta, retenção de anexos/recibos, análise antimalware, restauração de backups e parâmetros do servidor de produção dependem de homologação. Colar/arrastar arquivos são facilidades futuras não implementadas; seleção múltipla normal está disponível.
+
+Próxima etapa: **atendimento do TI**, somente após nova solicitação. Não foram antecipados fila, atribuição, transições, ciclos/relógios de SLA, prioridades calculadas, aprovações, alertas, exportações ou notificações. Pendências corporativas da seção 19 seguem preservadas.

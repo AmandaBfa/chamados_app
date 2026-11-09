@@ -1,6 +1,6 @@
-# Permissões — etapas 2 e 3
+# Permissões — etapas 2, 3 e 4
 
-Estado: implementado para autenticação, administração de acesso e cadastros. Perfis definidos pela especificação; parâmetros técnicos de segurança registrados como escolhas de desenvolvimento/piloto, sujeitos à homologação. Não modifica docs/especificacao.md.
+Estado: implementado para autenticação, administração de acesso, cadastros e portal pessoal. Perfis definidos pela especificação; parâmetros técnicos de segurança registrados como escolhas de desenvolvimento/piloto, sujeitos à homologação. Não modifica docs/especificacao.md.
 
 ## Regras implementadas
 
@@ -17,7 +17,8 @@ O catálogo contém colaborador, jovem aprendiz, suporte, analistas, desenvolved
 | roles.assign — conceder/remover perfis | Não | Não | Não | Não | Não | Não | Concessão específica, auditada e com proteção do último administrador |
 | catalogs.manage — listar/buscar/editar/inativar catálogos, membros e organização | Não | Não | Não | Não | Não | Não | Sim, com MFA, senha recente e justificativa nas alterações |
 | Editar/apagar auditoria pela aplicação | Não | Não | Não | Não | Não | Não | Não |
-| Acesso a chamados/anexos/buscas/exports | Não implementado nesta etapa | Não implementado | Não implementado | Não implementado | Não implementado | Não implementado | Não implementado |
+| Portal pessoal: abrir, buscar, consultar, comentar e anexar | Próprios chamados | Próprios chamados | Próprios chamados | Próprios chamados | Próprios chamados | Próprios chamados | Próprios chamados + MFA |
+| Notas internas / chamados alheios / exports no portal | Não | Não | Não | Não | Não | Não | Não |
 
 As cinco abilities são Gates separados no servidor. Todas exigem conta ativa, e-mail confirmado, perfil administrador, MFA confirmado no cadastro e comprovado na sessão atual, e versão de autenticação válida. As escritas exigem adicionalmente senha confirmada nos últimos 900 segundos; catálogos também exigem essa confirmação nas leituras administrativas. A página e o componente Livewire verificam autorização; AdminUserService/CatalogService repetem as verificações em cada operação, inclusive IDs/perfis adulterados no cliente.
 
@@ -58,3 +59,11 @@ Fila operacional comum de suporte/analistas e exceções sensíveis continuam pr
 tests/Feature/AccessControlTest.php testa todos os seis perfis não administrativos, rótulos de cargo/N3, mount Livewire negado, adulteração de alvo, validação de perfil, ações administrativas positivas, senha recente, último administrador, MFA e revogação. AC03 e AC04 estão associados a esses testes em rastreabilidade.md.
 
 tests/Feature/CatalogTest.php cobre URLs/componentes/serviço negados aos seis perfis comuns, ação Livewire após perda de permissão, Locked contra adulteração de catálogo, whitelist de organização contra alteração de roles/credenciais/estado, equipe/referência sem elevação, membros restritos à equipe e proteção dos vínculos. Escopo de chamados específicos/sensíveis continua reservado às etapas 4/5; specific_assignments_only é dado preparatório, sem implementar ou conceder acesso a chamados.
+
+## Portal pessoal — etapa 4
+
+Decisão explícita do usuário em 03/11/2026: todos os usuários internos ativos, inclusive TI e administrador, podem usar o portal de chamados próprios. Conta autorizada com credencial local, e-mail confirmado, sessão vigente e MFA para administrador continuam obrigatórios. Não é necessário conceder perfil Colaborador adicional aos demais perfis. Não há exceção de leitura global por administração, gerente, equipe ou referência.
+
+PortalAccess é a autoridade do escopo pessoal, aplicada por RequesterTickets, componentes e controller de download. Leitura/ação alheia retorna 404. Cada busca começa por requester_id da sessão; solicitante/autor/organização/visibilidade não são aceitos do navegador. Upload temporário tem dono e validade; ID/referência de outro usuário não pode ser reutilizado. Download verifica ticket+anexo+visibilidade do comentário. Conteúdo interno é excluído antes da projeção/serialização.
+
+Evidências: RequesterPortalTest cobre os sete perfis em chamados próprios, administrador sem leitura global, negação em GET/Livewire/busca/download, troca de IDs e autor, notas internas ausentes, uploads alheios e revogação de sessão em ações. Leitura operacional do TI/sensíveis, aprovação, SLA e exportações continuam não implementados, exigindo políticas próprias nas próximas etapas.

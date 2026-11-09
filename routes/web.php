@@ -4,7 +4,9 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MfaChallengeController;
 use App\Http\Controllers\PasswordRecoveryController;
 use App\Http\Controllers\SecurityController;
+use App\Http\Controllers\TicketAttachmentController;
 use App\Services\CatalogDefinition;
+use App\Services\PortalAccess;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers as Fortify;
 
@@ -35,6 +37,17 @@ Route::middleware('auth')->group(function () {
     Route::post('/user/confirm-password', [Fortify\ConfirmablePasswordController::class, 'store'])->middleware('throttle:access-sensitive')->name('password.confirm.store');
 
     Route::middleware('verified')->group(function () {
+        Route::middleware('admin.mfa')->group(function () {
+            Route::view('/meus-chamados', 'portal.index')->name('portal.index');
+            Route::view('/chamados/abrir', 'portal.open')->name('portal.open');
+            Route::get('/meus-chamados/{ticket}', function (int $ticket) {
+                app(PortalAccess::class)->own(auth()->user(), $ticket);
+
+                return view('portal.show', compact('ticket'));
+            })->whereNumber('ticket')->name('portal.show');
+            Route::get('/meus-chamados/{ticket}/anexos/{attachment}', TicketAttachmentController::class)
+                ->whereNumber(['ticket', 'attachment'])->name('portal.attachment');
+        });
         Route::view('/inicio', 'home')->middleware('admin.mfa')->name('home');
         Route::middleware(['password.confirm', 'throttle:access-sensitive'])->group(function () {
             Route::get('/seguranca', [SecurityController::class, 'show'])->name('security.show');

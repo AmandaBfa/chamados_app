@@ -85,7 +85,8 @@ class CatalogService
                     throw ValidationException::withMessages(['subcategory_id' => 'A subcategoria não pertence à categoria selecionada.']);
                 }
             }
-            if ($kind === 'subcategories' && $before && (int) $data['category_id'] !== $before->category_id && DB::table('services')->where('subcategory_id', $id)->exists()) {
+            if ($kind === 'subcategories' && $before && (int) $data['category_id'] !== $before->category_id &&
+                (DB::table('services')->where('subcategory_id', $id)->exists() || DB::table('tickets')->where('subcategory_id', $id)->exists())) {
                 throw ValidationException::withMessages(['category_id' => 'Subcategoria utilizada: preserve a categoria original e crie outra subcategoria.']);
             }
             if ($kind === 'teams') {

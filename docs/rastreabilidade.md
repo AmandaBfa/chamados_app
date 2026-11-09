@@ -1,15 +1,17 @@
 # Rastreabilidade
 
-Etapas 2 e 3: AC03 e AC04 atendidos no escopo de autenticação/administração local. AC05 tem evidência parcial nos cadastros, aguardando formulário de abertura da etapa 4. AC01/AC02 e demais fluxos futuros permanecem pendentes. Evidências pontuais não substituem o fluxo completo. Numeração de etapas segue o pedido de execução, detalhando a seção 18 da especificação sem modificar a cópia original.
+Revalidação em 09/11/2026: 73 testes e 967 asserções aprovados no PostgreSQL dedicado, incluindo a validação Livewire de início conhecido sem data e a abertura concorrente em processos independentes. AC17 permanece parcial.
+
+Etapas 2–4: AC03/AC04 atendidos na autenticação; AC01/AC02 verificados no portal pessoal, sem antecipar acesso operacional/notificações do TI. AC05/AC06/AC16 têm evidências funcionais de abertura/anexos; AC17 segue parcial por ausência de homologação visual. Evidências pontuais não substituem fluxos futuros. Numeração de etapas detalha a seção 18 sem modificar a cópia original.
 
 | Critério | Etapa responsável | Estado / evidência atual |
 |---|---|---|
-| AC01 acesso a chamado/anexo alheio | 2, 4, 5 | Pendente; disco privado configurado, autorização funcional ainda ausente |
-| AC02 isolamento de notas internas | 5 | Pendente |
+| AC01 acesso a chamado/anexo alheio | 2, 4, 5 | Atendido no portal: RequesterPortalTest::test_own_ticket_and_attachment_isolation_in_get_livewire_search_and_service, test_livewire_ticket_id_is_locked_against_switching_to_another_requester; políticas operacionais do TI ainda não implementadas |
+| AC02 isolamento de notas internas | 4, 5 | Atendido nas respostas do portal: test_internal_notes_events_and_attachments_absent_from_payloads_and_download; nota/evento/anexo internos criados como fixtures e ausentes de GET, Livewire, DTO e download. UI técnica/notificações futuras ainda não verificadas |
 | AC03 desativação em sessão aberta | 2 | Atendido: AccessControlTest::test_deactivation_revokes_database_sessions_and_old_session_cannot_return_after_reactivation e test_deactivated_session_is_blocked_on_livewire_update; sessão pendente MFA também bloqueada |
 | AC04 cadastro controlado | 2 | Atendido: GET/POST /register 404; convites autorizados, expiração/uso único, perfis comuns proibidos de administrar e bootstrap restrito; evidências em AccessControlTest |
-| AC05 subcategoria dependente | 3, 4 | Parcial: CatalogTest::test_incompatible_subcategory_rejected_and_category_change_clears_selection e test_database_composite_foreign_key_and_historical_reference_are_enforced; abertura de chamados ainda ausente |
-| AC06 idempotência na abertura | 4 | Pendente |
+| AC05 subcategoria dependente | 3, 4 | Atendido: CatalogTest e RequesterPortalTest::test_category_change_clears_selection_and_server_rejects_incompatible_or_inactive_catalog; FK composta em tickets e preservação de catálogo histórico testadas |
+| AC06 idempotência na abertura | 4 | Atendido: test_livewire_double_submit_and_retry_produce_one_ticket_one_event_and_same_protocol, test_opening_with_upload_via_livewire_is_idempotent_even_after_file_is_consumed e TicketConcurrencyTest com duas conexões/processos independentes |
 | AC07 transferência preserva SLA | 5, 6 | Pendente |
 | AC08 sexta 16h + 2h úteis | 6 | Pendente |
 | AC09 pausa de solução / retorno | 5, 6 | Pendente |
@@ -18,9 +20,9 @@ Etapas 2 e 3: AC03 e AC04 atendidos no escopo de autenticação/administração 
 | AC12 reabertura com novo ciclo | 5, 6 | Pendente |
 | AC13 deduplicação de alerta | 7 | Pendente |
 | AC14 reconciliação de dashboard | 7 | Pendente |
-| AC15 concorrência | 4, 5, 6 | Pendente |
-| AC16 validação de arquivos | 4 | Pendente |
-| AC17 temas, teclado e celular | 1, 4, 5, 8 | Parcial: tema persistido e estilos responsivos implementados; login conferido em desktop/390px, temas e foco; áreas funcionais futuras e homologação em aparelho físico pendentes |
+| AC15 concorrência | 4, 5, 6 | Parcial: abertura concorrente comprovada em TicketConcurrencyTest; alterações concorrentes de atendimento/SLA continuam pendentes |
+| AC16 validação de arquivos | 4 | Atendido na validação da aplicação: test_invalid_excessive_and_active_uploads_rejected_by_endpoint_and_final_submit, test_valid_image_pdf_text_and_safe_download_names, test_final_submit_revalidates_content_after_temporary_upload, test_failed_attachment_rolls_back_metadata_receipts_and_written_private_files. Não equivale a análise antivírus/homologação de produção |
+| AC17 temas, teclado e celular | 1, 4, 5, 8 | Parcial: tema/layout/rótulos implementados e views renderizadas; inspeção do portal no Edge não iniciada por timeout de autorização da ferramenta. Roteiro humano, celular físico e leitor de tela pendentes |
 | AC18 restauração de backup | 8 | Pendente |
 | AC19 cobertura e feriado | 6 | Pendente |
 | AC20 políticas históricas | 6 | Pendente |
@@ -31,13 +33,13 @@ Etapas 2 e 3: AC03 e AC04 atendidos no escopo de autenticação/administração 
 |---|---|---|---|
 | 1–4 | decisões, arquitetura e distribuição isolada | 1, 8 | Base Laravel/Livewire/Tailwind e PostgreSQL configurado; instalação isolada documentada; produção pendente |
 | 5–6 | usuários, identidades, funções, equipes, cadastro controlado e MFA administrativo | 2–3 | Autenticação, sete perfis, convites, MFA, desativação/sessões, auditoria e organização implementados; CatalogTest cobre membros, referências, vínculos e ausência de autoelevação |
-| 7–8 | abertura e catálogo integral | 3–4 | 11 categorias/41 subcategorias e 16 serviços persistidos; seed idempotente e formulários administrativos testados; abertura/anexos pendentes |
+| 7–8 | abertura e catálogo integral | 3–4 | Catálogo, abertura idempotente, snapshot de contexto, próprios chamados, comentário e anexos privados implementados/testados; sem classificação automática/SLA |
 | 9–10 | fluxo, colaboração, prioridades e histórico | 5 | Apenas modelo proposto |
 | 11 | calendário e dois relógios versionados | 6 | Apenas modelo proposto; sem implementação |
 | 12 | alertas e escalonamento | 7 | Infraestrutura de fila preparada; sem jobs de negócio |
-| 13 | três experiências, temas e acessibilidade | 1, 4–5, 8 | Tela mínima de fundação e tema; demais telas pendentes |
+| 13 | três experiências, temas e acessibilidade | 1, 4–5, 8 | Portal pessoal e administração implementados; área TI e homologação visual/acessibilidade completa pendentes |
 | 14 | indicadores e confiabilidade | 7 | Sem dashboard nem números fictícios |
-| 15 | modelo relacional completo | 1–7 | docs/modelo-dados.md; infraestrutura, identidade/acesso e cadastros migrados; chamados/SLA/alertas propostos |
-| 16 | autorização, anexos privados, operação e backup | 1–2, 4–5, 8 | Disco privado preparado; controles funcionais/operação pendentes |
-| 17 | critérios de aceitação | 2–8 | Tabela acima; AC03/AC04 com evidência, demais pendentes ou parciais |
+| 15 | modelo relacional completo | 1–7 | docs/modelo-dados.md; infraestrutura, identidade/acesso, cadastros, tickets/comments/attachments/events migrados; atendimento/SLA/alertas pendentes |
+| 16 | autorização, anexos privados, operação e backup | 1–2, 4–5, 8 | Isolamento do portal, upload e download privado testados; antimalware/operação/backup/homologação pendentes |
+| 17 | critérios de aceitação | 2–8 | Tabela acima com evidências e limites por escopo; critérios futuros preservados |
 | 18–20 | execução, validações e manutenção | 1–8 | docs/progresso.md e decisões técnicas; aprovações corporativas preservadas |
