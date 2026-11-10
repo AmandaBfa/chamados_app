@@ -100,7 +100,8 @@ class AccessControlTest extends TestCase
     {
         $this->get('/inicio')->assertRedirect('/login');
         $user = $this->user();
-        $this->post('/login', ['email' => $user->email, 'password' => 'incorreta'])->assertSessionHasErrors('email');
+        $this->from('/login')->post('/login', ['email' => $user->email, 'password' => 'incorreta'])
+            ->assertRedirect('/login')->assertSessionHasErrors('email');
         $this->assertGuest();
         $this->login($user);
         $this->get('/inicio')->assertOk()->assertSee($user->name);

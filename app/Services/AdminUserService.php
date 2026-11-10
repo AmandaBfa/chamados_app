@@ -49,7 +49,10 @@ class AdminUserService
     public function reissue(User $actor, int $userId, string $reason): void
     {
         $this->authorize($actor, 'users.create');
-        Validator::make(['reason' => $reason], ['reason' => ['required', 'string', 'min:8', 'max:500']])->validate();
+        $reason = trim($reason);
+        Validator::make(['reason' => $reason], ['reason' => ['required', 'string', 'min:8', 'max:500']], [
+            'reason.required' => 'Preencha a justificativa antes de reenviar o convite.',
+        ], ['reason' => 'justificativa'])->validate();
         DB::transaction(function () use ($actor, $userId, $reason) {
             $user = User::lockForUpdate()->findOrFail($userId);
             if (! $user->active || $user->password !== null) {

@@ -19,13 +19,13 @@ class RequesterTickets
         'aguardando_solicitante' => 'Aguardando solicitante', 'aguardando_terceiro' => 'Aguardando terceiro',
         'resolvido' => 'Resolvido', 'fechado' => 'Fechado', 'cancelado' => 'Cancelado'];
 
-    public function open(User $actor, array $input, string $key, array $files = []): object
+    public function open(User $actor, array $input, string $key, array $files = [], ?int $related = null): object
     {
         app(PortalAccess::class)->authorize($actor);
         Validator::make(['key' => $key], ['key' => ['required', 'uuid']])->validate();
         $written = [];
         try {
-            return DB::transaction(function () use ($actor, $input, $key, $files, &$written) {
+            return DB::transaction(function () use ($actor, $input, $key, $files, $related, &$written) {
                 // Mesmo lock dos catálogos impede seleção concorrente à inativação/mudança do pai.
                 DB::select('SELECT pg_advisory_xact_lock(73003)');
                 $requester = User::lockForUpdate()->findOrFail($actor->id);
@@ -35,6 +35,7 @@ class RequesterTickets
                     return $existing;
                 }
                 $data = $this->validateOpening($input);
+                $previous = $related === null ? null : app(PortalAccess::class)->own($actor, $related);
                 $context = [];
                 foreach (['unit_id' => 'units', 'department_id' => 'departments'] as $field => $table) {
                     $row = $requester->$field ? DB::table($table)->find($requester->$field) : null;
@@ -44,7 +45,9 @@ class RequesterTickets
                     'protocol' => 'CH-'.strtoupper((string) Str::ulid()), 'idempotency_key' => $key,
                     'requester_id' => $requester->id, 'unit_id' => $requester->unit_id, 'department_id' => $requester->department_id,
                     'opening_context' => json_encode($context, JSON_THROW_ON_ERROR), 'type' => 'incidente',
-                    'status' => 'novo', 'created_at' => now(), 'updated_at' => now(),
+                    'status' => 'novo', 'related_ticket_id' => $related, 'created_at' => now(), 'updated_at' => now(),
+                    'restricted' => ($previous && ($previous->restricted || TicketOperations::securityCategory($previous->category_id)))
+                        || TicketOperations::securityCategory($data['category_id']),
                 ]);
                 $this->attach($actor, $id, null, $files, $written);
                 $this->event($id, $actor->id, 'ticket.opened', 'Chamado aberto pelo solicitante.');
@@ -113,7 +116,7 @@ class RequesterTickets
         $written = [];
         try {
             DB::transaction(function () use ($actor, $ticketId, $body, $key, $files, &$written) {
-                DB::table('tickets')->where('id', $ticketId)->lockForUpdate()->firstOrFail();
+                $ticket = DB::table('tickets')->where('id', $ticketId)->lockForUpdate()->firstOrFail();
                 app(PortalAccess::class)->own($actor, $ticketId);
                 if (DB::table('comments')->where('ticket_id', $ticketId)->where('author_id', $actor->id)->where('idempotency_key', $key)->exists()) {
                     return;
@@ -123,8 +126,10 @@ class RequesterTickets
                 $id = DB::table('comments')->insertGetId(['ticket_id' => $ticketId, 'author_id' => $actor->id, 'body' => $body,
                     'idempotency_key' => $key, 'visibility' => 'public', 'created_at' => now(), 'updated_at' => now()]);
                 $this->attach($actor, $ticketId, $id, $files, $written);
-                DB::table('tickets')->where('id', $ticketId)->update(['updated_at' => now(), 'lock_version' => DB::raw('lock_version + 1')]);
-                $this->event($ticketId, $actor->id, 'comment.added', 'Comentário público adicionado pelo solicitante.');
+                $returning = $ticket->status === 'aguardando_solicitante';
+                TicketOperations::record($ticket, $actor->id, $returning ? 'ticket.requester_returned' : 'comment.added',
+                    $returning ? ['status' => 'em_atendimento'] : [], ['comment_id' => $id],
+                    $returning ? 'O solicitante respondeu. Atendimento retomado.' : 'Comentário público adicionado pelo solicitante.');
             });
         } catch (\Throwable $exception) {
             $this->cleanup($written);
@@ -179,7 +184,7 @@ class RequesterTickets
         $ticket = app(PortalAccess::class)->own($actor, $id);
         // Somente DTO permitido chega à view; notas internas e detalhes técnicos nem são carregados.
         $publicTicket = array_intersect_key((array) $ticket, array_flip(['id', 'protocol', 'subject', 'description', 'status',
-            'impact_scope', 'affected_process', 'work_condition', 'started_unknown', 'started_at', 'created_at']));
+            'impact_scope', 'affected_process', 'work_condition', 'started_unknown', 'started_at', 'created_at', 'reopen_requested_at', 'related_ticket_id']));
         $publicTicket['context'] = json_decode($ticket->opening_context, true, 512, JSON_THROW_ON_ERROR);
         $labels = [];
         foreach (['category_id' => 'categories', 'subcategory_id' => 'subcategories', 'service_id' => 'services', 'equipment_reference_id' => 'equipment_references'] as $field => $table) {

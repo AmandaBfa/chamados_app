@@ -1,6 +1,6 @@
 # Progresso — sistema de chamados de TI
 
-Atualizado em 03/11/2026. Escopo executado: etapas 1–4, com resultados e histórico separados abaixo. A documentação original foi lida integralmente e copiada sem alteração para especificacao.md. SHA-256: 7885ee818100b1ac35445e4f39bbcaed2be533f67db9bac9930e4700fc089688.
+Atualizado em 09/11/2026. Escopo executado: etapas 1–4 e implementação parcial da etapa 5, com resultados e histórico separados abaixo. A documentação original foi lida integralmente e copiada sem alteração para especificacao.md. SHA-256: 7885ee818100b1ac35445e4f39bbcaed2be533f67db9bac9930e4700fc089688.
 
 ## Oito etapas autorizáveis
 
@@ -10,7 +10,7 @@ Atualizado em 03/11/2026. Escopo executado: etapas 1–4, com resultados e hist�
 | 2. Autenticação e permissões | Concluída para desenvolvimento/piloto; 34 testes/385 assertions aprovados | Conta inicial criada pelo operador; testes manuais da etapa 2 concluídos pelo usuário em 03/11/2026 |
 | 3. Cadastros | Concluída para desenvolvimento/piloto em 03/11/2026; regressão 48 testes/572 assertions | Roteiro humano em testes-etapa3.md; etapa 4 somente após nova solicitação |
 | 4. Portal do colaborador | Concluída para desenvolvimento/piloto, com 73 testes e 967 asserções na revalidação | Roteiro humano/visual em testes-etapa4.md. Etapa 5 somente após nova solicitação |
-| 5. Atendimento do TI | Não iniciada | Fila, atribuição, notas internas, transições, histórico e concorrência |
+| 5. Atendimento do TI | Parcial | Validar roteiro humano e definir concessão a restritos com DPO, gerente e analista de rede |
 | 6. Motor de SLA | Não iniciada | Calendários/versionamento, ciclos, dois relógios, pausas e testes de borda |
 | 7. Alertas e dashboards | Não iniciada | Deduplicação, escalonamento, indicadores e reconciliação por filtros |
 | 8. Homologação e implantação | Não iniciada | Aprovações corporativas, rede/hospedagem, HTTPS, backup/restauração, segurança e piloto |
@@ -275,3 +275,27 @@ Condição técnica de avanço atendida: usuário abre/consulta/comenta/anexa em
 Roteiro em testes-etapa4.md. Não há scanner antivírus/parser completo de PDF; filtros conservadores podem rejeitar PDFs complexos. Reconciliação de órfãos após queda abrupta, retenção de anexos/recibos, análise antimalware, restauração de backups e parâmetros do servidor de produção dependem de homologação. Colar/arrastar arquivos são facilidades futuras não implementadas; seleção múltipla normal está disponível.
 
 Próxima etapa: **atendimento do TI**, somente após nova solicitação. Não foram antecipados fila, atribuição, transições, ciclos/relógios de SLA, prioridades calculadas, aprovações, alertas, exportações ou notificações. Pendências corporativas da seção 19 seguem preservadas.
+
+## Etapa 5 — atendimento do TI (09/11/2026)
+
+**Parcial.** A fila comum e o fluxo humano estão implementados em Livewire, com filtros combináveis, busca, paginação, classificação, atribuição, colaboradores técnicos, conversa pública e interna, transições, histórico, reabertura e redistribuição sinalizada. A integração operacional dos chamados restritos depende da definição de acesso com DPO, gerente e analista de rede. A salvaguarda temporária exclui Segurança da informação da fila comum e exige concessão individual na leitura técnica. O portal pessoal continua disponível ao solicitante.
+
+| Verificação | Resultado |
+|---|---|
+| Estado do Git | Árvore inicial limpa. Exceção safe.directory por comando, sem mudar configuração global |
+| Primeira tentativa de PHPUnit no sandbox | Falhou na checagem de leitura de vendor/autoload.php |
+| Migração incremental de atendimento | Aprovada em chamados_test e chamados_dev. No desenvolvimento, identidade SQL confirmou chamados_dev/chamados_app em loopback antes da migração. Nenhuma limpeza de banco |
+| Regressão de base após a migração | Aprovada, 73 testes e 967 asserções em PostgreSQL dedicado |
+| Primeira verificação focada | Três casos passaram, inclusive atribuição concorrente. O caso administrativo esperava 403 após chegar à autorização de TI, mas recebeu redirecionamento para configurar MFA. Fixture corrigida para testar administrador com MFA confirmado |
+| Regressão completa de atendimento | Aprovada, 76 testes e 1019 asserções. Dois processos independentes validaram a abertura idempotente e, em ensaio separado, a exclusividade da assunção técnica |
+| Revalidação focada após reforçar bloqueio e escopo | Aprovada, 2 testes e 46 asserções em TicketOperationsTest. Inclui filtros combinados, motivo de cancelamento e ação Livewire negada após retirar a concessão |
+| Pint dos PHP alterados | Aprovado com caminhos explícitos. A tentativa inicial com --dirty falhou pelo controle de propriedade do Git, e a primeira escrita sandbox não tinha acesso ao arquivo de rotas |
+| npm.cmd run build | Aprovado, Vite 7.3.7 |
+| Teste humano e visual | Não executado. Roteiro em testes-etapa5.md |
+| Consulta técnica | APIs reaproveitadas do código local e de dependências instaladas. Sem necessidade de confirmar versão ou instalar dependências novas |
+
+A primeira resposta humana usa marcação explícita pelo técnico em retorno público com texto. Os eventos registram início/fim das esperas, instante, ator, antes/depois, ciclo e justificativa conforme a ação. Cancelamento tem desfecho separado de resolução. Transferência preserva o ciclo. A próxima etapa depende da validação do fluxo humano, dos eventos e do isolamento, incluindo a definição da rota de restritos. Os testes de integração de prazos, violações, saldo de reabertura e fechamento automático de 27 horas de cobertura pertencem à etapa 6. Não houve push nem implantação.
+
+### Teste manual da etapa 5
+
+A operadora informou que parou no teste 4 de testes-etapa5.md. Retomar desse item para validar resolução, confirmação, reabertura e cancelamento. A conclusão do teste 4 e dos itens seguintes ainda não foi registrada.

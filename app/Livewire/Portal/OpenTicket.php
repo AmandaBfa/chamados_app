@@ -16,6 +16,9 @@ class OpenTicket extends Component
     #[Locked]
     public string $submissionKey;
 
+    #[Locked]
+    public ?int $related = null;
+
     public array $form = ['subject' => '', 'description' => '', 'category_id' => null, 'subcategory_id' => null,
         'service_id' => null, 'equipment_reference_id' => null, 'impact_scope' => '', 'affected_process' => '',
         'work_condition' => '', 'started_unknown' => true, 'started_at' => null];
@@ -24,10 +27,11 @@ class OpenTicket extends Component
 
     public array $files = [];
 
-    public function mount(): void
+    public function mount(?int $related = null): void
     {
         app(PortalAccess::class)->authorize(auth()->user());
         $this->submissionKey = (string) Str::uuid();
+        $this->related = $related;
     }
 
     public function updatedFormCategoryId(): void
@@ -58,7 +62,7 @@ class OpenTicket extends Component
 
     public function submit(RequesterTickets $service): void
     {
-        $ticket = $service->open(auth()->user(), $this->form, $this->submissionKey, $this->files);
+        $ticket = $service->open(auth()->user(), $this->form, $this->submissionKey, $this->files, $this->related);
         session()->flash('status', 'Chamado registrado. Seu protocolo é '.$ticket->protocol.'.');
         $this->redirectRoute('portal.show', ['ticket' => $ticket->id]);
     }

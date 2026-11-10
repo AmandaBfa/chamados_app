@@ -1,0 +1,88 @@
+<section class="space-y-5">
+    @if(session('status'))<p role="status">{{ session('status') }}</p>@endif
+    <h1 class="text-2xl font-semibold break-words">{{ $ticket->protocol }} · {{ $ticket->subject }}</h1>
+    <div class="flex flex-wrap items-center gap-3">
+        <x-ticket-status :status="$ticket->status" />
+        <span>Ciclo {{ $ticket->cycle }}</span>
+        <span>Prioridade {{ $ticket->priority ?? 'a validar' }}</span>
+    </div>
+    <section class="rounded-lg border border-slate-300 p-4 dark:border-slate-600" aria-labelledby="requester-title">
+        <h2 id="requester-title">Solicitante</h2>
+        <dl class="mt-3 grid gap-3 break-words sm:grid-cols-2">
+            <div><dt class="font-medium">Nome</dt><dd>{{ $requester->name }}</dd></div>
+            <div><dt class="font-medium">E-mail</dt><dd>{{ $requester->email }}</dd></div>
+            <div>
+                <dt class="font-medium">Unidade na abertura</dt>
+                <dd>{{ $openingContext['units']['name'] ?? 'Não informada' }}@if(!empty($openingContext['units']['city'])) · {{ $openingContext['units']['city'] }}@endif</dd>
+            </div>
+            <div><dt class="font-medium">Setor na abertura</dt><dd>{{ $openingContext['departments']['name'] ?? 'Não informado' }}</dd></div>
+        </dl>
+    </section>
+    <p class="whitespace-pre-wrap">{{ $ticket->description }}</p>
+    <p>Processo afetado: {{ $ticket->affected_process }} · Abrangência: {{ $ticket->impact_scope }} · Condição: {{ str_replace('_', ' ', $ticket->work_condition) }}</p>
+    @if ($ticket->reopen_requested_at)<p class="font-semibold">Reabertura solicitada pelo colaborador.</p>@endif
+    <x-portal-errors />
+    <form wire:submit="save" class="space-y-3">
+        <label class="block">Ação
+            <select class="field" wire:model.live="action" required>
+                <option value="">Selecione</option>
+                @foreach (['triage' => 'Iniciar triagem', 'classify' => 'Classificar', 'start' => 'Iniciar atendimento', 'assign' => 'Atribuir ou transferir', 'claim' => 'Assumir', 'collaborate' => 'Designar colaborador técnico', 'reply' => 'Enviar resposta pública', 'note' => 'Registrar nota interna', 'wait_requester' => 'Aguardar solicitante', 'wait_third' => 'Aguardar terceiro', 'resume' => 'Retomar atendimento', 'resolve' => 'Resolver', 'cancel' => 'Cancelar', 'reopen' => 'Validar reabertura', 'decline_reopen' => 'Recusar reabertura'] as $value => $label)
+                    <option value="{{ $value }}">{{ $label }}</option>
+                @endforeach
+            </select>
+        </label>
+        @foreach (['category_id' => 'Categoria', 'subcategory_id' => 'Subcategoria', 'service_id' => 'Serviço', 'team_id' => 'Equipe', 'user_id' => 'Técnico'] as $field => $label)
+            @if ((in_array($action, ['classify', 'resolve']) && in_array($field, ['category_id', 'subcategory_id', 'service_id'])) || ($action === 'assign' && in_array($field, ['team_id', 'user_id'])) || ($action === 'collaborate' && $field === 'user_id'))
+                <label class="block">{{ $label }}
+                    <select class="field" wire:model.live="input.{{ $field }}">
+                        <option value="">Selecione</option>
+                        @foreach ($choices[$field] as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach
+                    </select>
+                </label>
+            @endif
+        @endforeach
+        @if ($action === 'classify')
+            <label class="block">Prioridade
+                <select class="field" wire:model="input.priority"><option value="">Manter atual</option>
+                    @foreach (['P1', 'P2', 'P3', 'P4'] as $priority)<option>{{ $priority }}</option>@endforeach
+                </select>
+            </label>
+            <p>Justifique mudanças pela combinação de impacto no negócio e urgência.</p>
+        @endif
+        @if (in_array($action, ['reply', 'note', 'wait_requester', 'wait_third', 'resolve']))
+            <label class="block">{{ ['reply' => 'Resposta pública', 'note' => 'Nota interna, visível somente ao TI autorizado', 'wait_requester' => 'Pergunta pública indispensável', 'wait_third' => 'Fornecedor ou dependência', 'resolve' => 'Solução comunicada ao solicitante'][$action] }}
+                <textarea class="field" wire:model="input.body" rows="4" required></textarea>
+            </label>
+        @endif
+        @if (in_array($action, ['reply', 'wait_requester', 'resolve']))
+            <label class="block"><input type="checkbox" wire:model="input.useful"> Confirmo que este retorno público demonstra entendimento ou oferece encaminhamento útil.</label>
+        @endif
+        @if ($action === 'wait_third')
+            <label class="block">Protocolo do terceiro <input class="field" wire:model="input.protocol" required></label>
+        @endif
+        @if ($action === 'resolve')
+            <label class="block">Restauração temporária, se aplicável <textarea class="field" wire:model="input.restoration"></textarea></label>
+        @endif
+        @if (in_array($action, ['assign', 'collaborate', 'classify', 'wait_requester', 'resume', 'cancel', 'reopen', 'decline_reopen']))
+            <label class="block">Justificativa <textarea class="field" wire:model="input.reason"></textarea></label>
+        @endif
+        <button class="primary" type="submit" wire:loading.attr="disabled">Registrar ação</button>
+    </form>
+    <h2 class="text-xl font-semibold">Conversa</h2>
+    @foreach ($comments as $comment)
+        <article class="rounded border p-3 {{ $comment->visibility === 'internal' ? 'border-amber-500' : 'border-sky-500' }}">
+            <strong>{{ $comment->visibility === 'internal' ? 'Nota interna' : 'Mensagem pública' }} · {{ $comment->name }}</strong>
+            <p class="whitespace-pre-wrap">{{ $comment->body }}</p>
+        </article>
+    @endforeach
+    @foreach ($attachments as $file)
+        <a class="text-link block" href="{{ route('ti.attachment', [$ticket->id, $file->id]) }}">{{ $file->download_name }}</a>
+    @endforeach
+    <h2 class="text-xl font-semibold">Histórico</h2>
+    @foreach ($events as $event)
+        <details class="rounded border p-3">
+            <summary>{{ $event->public_summary ?? (['ticket.note' => 'Nota interna', 'ticket.triage' => 'Triagem iniciada', 'ticket.assign' => 'Atribuição atualizada', 'ticket.claim' => 'Chamado assumido', 'ticket.classify' => 'Classificação atualizada', 'ticket.collaborate' => 'Colaboração designada'][$event->event_type] ?? $event->event_type) }} · {{ $event->name }} · {{ \Illuminate\Support\Carbon::parse($event->occurred_at)->setTimezone(config('installation.display_timezone'))->format('d/m/Y H:i:s') }}</summary>
+            <pre class="whitespace-pre-wrap break-all">{{ json_encode(json_decode($event->details), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+        </details>
+    @endforeach
+</section>

@@ -8,6 +8,7 @@ use App\Services\AdminUserService;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class UsersPanel extends Component
 {
@@ -33,10 +34,14 @@ class UsersPanel extends Component
 
     public function createInvite(AdminUserService $service): void
     {
-        $service->invite(auth()->user(), ['name' => $this->inviteName, 'email' => $this->inviteEmail,
-            'roles' => $this->inviteRoles, 'reason' => $this->inviteReason]);
+        try {
+            $service->invite(auth()->user(), ['name' => $this->inviteName, 'email' => $this->inviteEmail,
+                'roles' => $this->inviteRoles, 'reason' => $this->inviteReason]);
+            session()->flash('status', 'Conta autorizada. Convite enviado; se não chegar, utilize o reenvio.');
+        } catch (TransportExceptionInterface) {
+            session()->flash('invite_warning', 'A conta foi autorizada, mas o e-mail do convite não pôde ser enviado. Verifique o serviço de e-mail e use Reenviar convite pendente.');
+        }
         $this->reset('inviteName', 'inviteEmail', 'inviteRoles', 'inviteReason');
-        session()->flash('status', 'Conta autorizada. Convite enviado; se não chegar, utilize o reenvio.');
     }
 
     public function edit(int $id): void
@@ -72,7 +77,13 @@ class UsersPanel extends Component
 
     public function reissueInvite(int $id, AdminUserService $service): void
     {
-        $service->reissue(auth()->user(), $id, $this->reason);
+        try {
+            $service->reissue(auth()->user(), $id, $this->reason);
+        } catch (TransportExceptionInterface) {
+            session()->flash('invite_warning', 'O novo convite foi gerado, mas o e-mail não pôde ser enviado. Verifique o serviço de e-mail e tente reenviar novamente.');
+
+            return;
+        }
         session()->flash('status', 'Novo convite enviado. O link anterior foi invalidado.');
     }
 

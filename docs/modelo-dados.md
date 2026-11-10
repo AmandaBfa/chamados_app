@@ -1,6 +1,6 @@
 # Modelo de dados proposto
 
-Estado: etapas 1–4 implementadas conforme detalhamento abaixo; atendimento, ciclos/relógios de SLA e alertas das etapas 5–7 continuam propostas técnicas e não constituem política corporativa aprovada. A especificação original permanece em especificacao.md. Uma instalação/banco por empresa; não haverá tenant_id nem autorização transversal.
+Estado: etapas 1–4 implementadas e etapa 5 parcialmente implementada conforme detalhamento abaixo. Relógios de SLA e alertas continuam propostas técnicas e não constituem política corporativa aprovada. A especificação original permanece em especificacao.md. Uma instalação/banco por empresa; não haverá tenant_id nem autorização transversal.
 
 ## Fundação implementada
 
@@ -94,3 +94,11 @@ Criação serializada pelo lock transacional de catálogos 73003 e pelo usuário
 Snapshots de unidade/setor não se recalculam quando o usuário/cadastro muda. Itens inativados continuam legíveis nos chamados antigos. Reparentear subcategoria usada em tickets é bloqueado no serviço administrativo, além da FK. Serviço configurado com categoria/subcategoria deve ser compatível; serviço sem classificação é opcional. Campos nulos do cadastro organizacional ficam explícitos como não informados, sem bloquear acesso com regra nova não definida.
 
 Compatibilidade com SLA futuro: abertura persistida em created_at e evento ticket.opened com ator/instante; tipo, prioridade nullable, lock_version e eventos não exigem prazo calculado nem ciclo simulado. Etapas 5/6 poderão acrescentar responsáveis, ciclos, versões de políticas/calendários e referências de ciclo aos eventos por migrações novas. Não há relógio contado por comentários nem inferência de P1 pelo nome Solus.
+
+## Etapa 5 — atendimento
+
+A migração incremental adiciona à tabela tickets FKs opcionais para equipe, responsável principal e chamado anterior vinculado, além de indicador de restrição, número de ciclo (inicial 1), instante de primeira resposta útil no ciclo e instante do pedido pendente de reabertura. Índices por equipe/situação e responsável/situação servem à fila. Tickets existentes mantêm sua classificação, autoria e histórico. A proteção de Segurança da informação considera a chave do catálogo em consultas, inclusive para chamados existentes.
+
+ticket_participants e ticket_access_grants usam PK composta (ticket_id, user_id) e FKs restritivas. Participação técnica e concessão a chamado restrito são independentes. A validação de atribuição verifica usuário ativo, perfil e vínculo ativo à equipe. Um único assignee_id representa o principal.
+
+ticket_events registra o ciclo e o antes/depois dos campos afetados, além de motivo e vínculos de comentário quando pertinentes. Os intervalos de espera são delimitados pelos eventos de entrada/saída no mesmo ciclo. A reabertura incrementa o ciclo e limpa o marcador de primeira resposta atual, preservando o anterior nos eventos. Os eventos antigos de abertura pertencem ao ciclo 1. A solução mantém o texto público em comments e o detalhe separado de restauração no evento técnico. Nenhuma política ou versão de SLA é gravada nesta etapa.

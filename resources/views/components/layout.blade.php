@@ -1,4 +1,4 @@
-@props(['title' => 'Sistema de chamados'])
+@props(['title' => 'Sistema de chamados', 'showErrorSummary' => true])
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -26,7 +26,7 @@
         @if(session('status'))
             <p role="status" class="mb-6 rounded-lg border border-emerald-400 bg-emerald-50 p-4 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-100">{{ __(session('status')) }}</p>
         @endif
-        @if(collect($errors->getBags())->contains(fn ($bag) => $bag->any()))
+        @if($showErrorSummary && collect($errors->getBags())->contains(fn ($bag) => $bag->any()))
             <div role="alert" class="mb-6 rounded-lg border border-red-400 bg-red-50 p-4 text-red-900 dark:bg-red-950 dark:text-red-100">
                 <p class="font-semibold">Confira os dados informados:</p>
                 <ul class="mt-2 list-inside list-disc">

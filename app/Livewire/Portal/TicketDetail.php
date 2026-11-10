@@ -4,6 +4,7 @@ namespace App\Livewire\Portal;
 
 use App\Services\PortalAccess;
 use App\Services\RequesterTickets;
+use App\Services\TicketOperations;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -18,15 +19,26 @@ class TicketDetail extends Component
     #[Locked]
     public string $commentKey;
 
+    #[Locked]
+    public int $version;
+
+    public string $reopenReason = '';
+
     public string $body = '';
 
     public array $files = [];
 
     public function mount(int $ticketId): void
     {
-        app(PortalAccess::class)->own(auth()->user(), $ticketId);
+        $this->version = app(PortalAccess::class)->own(auth()->user(), $ticketId)->lock_version;
         $this->ticketId = $ticketId;
         $this->commentKey = (string) Str::uuid();
+    }
+
+    public function solution(string $action, TicketOperations $service): void
+    {
+        $service->requesterAction(auth()->user(), $this->ticketId, $this->version, $action, $this->reopenReason);
+        $this->redirectRoute('portal.show', ['ticket' => $this->ticketId]);
     }
 
     public function comment(RequesterTickets $service): void
@@ -34,6 +46,7 @@ class TicketDetail extends Component
         $service->comment(auth()->user(), $this->ticketId, $this->body, $this->commentKey, $this->files);
         $this->reset('body', 'files');
         $this->commentKey = (string) Str::uuid();
+        $this->version = app(PortalAccess::class)->own(auth()->user(), $this->ticketId)->lock_version;
         session()->flash('status', 'Comentário público registrado.');
     }
 

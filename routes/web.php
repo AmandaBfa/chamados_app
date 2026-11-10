@@ -7,6 +7,8 @@ use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Services\CatalogDefinition;
 use App\Services\PortalAccess;
+use App\Services\TicketOperations;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers as Fortify;
 
@@ -38,8 +40,23 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('verified')->group(function () {
         Route::middleware('admin.mfa')->group(function () {
+            Route::view('/ti/chamados', 'ti.queue')->name('ti.index');
+            Route::get('/ti/chamados/{ticket}', function (int $ticket) {
+                app(TicketOperations::class)->ticket(auth()->user(), $ticket);
+
+                return view('ti.detail', compact('ticket'));
+            })->whereNumber('ticket')->name('ti.show');
+            Route::get('/ti/chamados/{ticket}/anexos/{attachment}', [TicketAttachmentController::class, 'staff'])
+                ->whereNumber(['ticket', 'attachment'])->name('ti.attachment');
             Route::view('/meus-chamados', 'portal.index')->name('portal.index');
-            Route::view('/chamados/abrir', 'portal.open')->name('portal.open');
+            Route::get('/chamados/abrir', function (Request $request) {
+                $related = $request->integer('relacionado') ?: null;
+                if ($related !== null) {
+                    app(PortalAccess::class)->own(auth()->user(), $related);
+                }
+
+                return view('portal.open', compact('related'));
+            })->name('portal.open');
             Route::get('/meus-chamados/{ticket}', function (int $ticket) {
                 app(PortalAccess::class)->own(auth()->user(), $ticket);
 

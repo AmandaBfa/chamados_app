@@ -2,8 +2,10 @@
 
 use App\Models\User;
 use App\Services\RequesterTickets;
+use App\Services\TicketOperations;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 // Executado exclusivamente pelo ensaio de concorrência com fixtures fictícias.
 putenv('APP_ENV=testing');
@@ -24,6 +26,18 @@ echo "READY\n";
 flush();
 if (trim((string) fgets(STDIN)) !== 'GO') {
     exit(2);
+}
+if (($argv[4] ?? '') === 'claim') {
+    try {
+        app(TicketOperations::class)->act($actor, (int) $argv[2], (int) $argv[3], 'claim', []);
+        echo "\"claimed\"\n";
+    } catch (ValidationException $exception) {
+        if (! str_contains($exception->errors()['operation'][0] ?? '', 'Recarregue')) {
+            throw $exception;
+        }
+        echo "\"conflict\"\n";
+    }
+    exit;
 }
 $ticket = app(RequesterTickets::class)->open($actor, [
     'subject' => 'Ensaio fictício concorrente', 'description' => 'Descrição fictícia do ensaio.',

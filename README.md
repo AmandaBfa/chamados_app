@@ -181,3 +181,7 @@ Limites em config/tickets.php: até cinco anexos por abertura/comentário, 10 MB
 Os testes de upload usam discos fictícios separados por processo; testes de escrita usam chamados_test com rollback. O ensaio de concorrência com dois processos precisa de fixtures temporariamente gravadas com commit nesse banco para serem compartilhadas; finally remove exclusivamente os IDs fictícios criados pelo ensaio. Não rodar o worker manualmente nem apontá-lo a outro banco. Não há envio de e-mail na abertura/comentário, exportações, atendimento/SLA ou automações de negócio nesta etapa.
 
 Validação funcional por HTTP, Livewire e PostgreSQL. A revalidação de 09/11/2026 aprovou 73 testes e 967 asserções. Teclado, tela reduzida, celular físico e leitor de tela ainda precisam ser verificados pelo roteiro em docs/testes-etapa4.md. A etapa está concluída para desenvolvimento e piloto, com homologação visual e autorização de produção pendentes.
+
+## Atendimento do TI
+
+A fila fica em **Início → Fila do TI** para perfis operacionais habilitados. Consulte a [tabela de transições e o roteiro da etapa 5](docs/testes-etapa5.md). Em ambiente de desenvolvimento isolado, aplique a migração incremental pelo procedimento local descrito neste README. A definição corporativa de concessão a chamados restritos segue pendente com a DPO, o gerente e o analista de rede. Os relógios e o fechamento automático por horas de cobertura pertencem à etapa 6.

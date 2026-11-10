@@ -1,5 +1,6 @@
 <div class="space-y-8">
     @if(session('status'))<p role="status" class="rounded-lg border border-emerald-400 p-4">{{ session('status') }}</p>@endif
+    @if(session('invite_warning'))<p role="alert" class="rounded-lg border border-amber-500 p-4">{{ session('invite_warning') }}</p>@endif
     @if($errors->any())
         <div role="alert" class="rounded-lg border border-red-400 p-4"><p class="font-semibold">Não foi possível salvar:</p><ul class="mt-2 list-inside list-disc">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
     @endif
@@ -43,7 +44,13 @@
                 <fieldset><legend class="font-medium">Perfis autorizados</legend><div class="mt-3 flex flex-wrap gap-4">
                     @foreach($availableRoles as $role)<label class="flex items-center gap-2"><input type="checkbox" wire:model="selectedRoles" value="{{ $role->value }}">{{ $role->label() }}</label>@endforeach
                 </div></fieldset>
-                <div><label for="reason">Justificativa da alteração ou reenvio</label><textarea id="reason" wire:model="reason" rows="2" minlength="8" maxlength="500" required></textarea></div>
+                <div>
+                    <label for="reason">Justificativa da alteração ou reenvio</label>
+                    <textarea id="reason" wire:model="reason" rows="2" minlength="8" maxlength="500" required @error('reason') aria-invalid="true" aria-describedby="reason-error" @enderror></textarea>
+                    @error('reason')
+                        <p id="reason-error" role="alert" class="mt-2 font-medium text-red-900 dark:text-red-100">{{ $message }}</p>
+                    @enderror
+                </div>
                 <p class="muted text-sm">Alterar estado ou perfis encerra sessões e invalida links anteriores. Uma conta reativada precisa entrar novamente. O último administrador ativo é protegido.</p>
                 <button class="primary" type="submit" wire:loading.attr="disabled">Salvar acesso</button>
                 <button class="secondary" type="button" wire:click="reissueInvite({{ $selectedId }})" wire:loading.attr="disabled">Reenviar convite pendente</button>

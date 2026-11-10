@@ -2,7 +2,27 @@
     @if(session('status'))<p role="status" class="rounded-lg border border-emerald-400 p-4">{{ session('status') }}</p>@endif
     <section class="panel">
         <p class="eyebrow break-all">{{ $ticket['protocol'] }}</p><h1 class="mt-3 break-words">{{ $ticket['subject'] }}</h1>
-        <p class="mt-4 font-semibold">Situação: {{ \App\Services\RequesterTickets::STATUSES[$ticket['status']] }}</p>
+        <p class="mt-4 font-semibold">Situação <x-ticket-status :status="$ticket['status']" /></p>
+        @if($ticket['related_ticket_id'])
+            <a class="text-link" href="{{ route('portal.show', $ticket['related_ticket_id']) }}">Chamado anterior vinculado</a>
+        @endif
+        @if(in_array($ticket['status'], ['resolvido', 'fechado']))
+            <div class="mt-4 space-y-3">
+                @if($ticket['reopen_requested_at'])
+                    <p>Pedido de reabertura aguardando avaliação do TI.</p>
+                @else
+                    @if($ticket['status'] === 'resolvido')
+                        <button type="button" class="secondary" wire:click="solution('confirm')" wire:loading.attr="disabled">Confirmar solução</button>
+                    @endif
+                    <form wire:submit="solution('request_reopen')">
+                        <label for="reopen-reason">O mesmo problema voltou? Descreva o que aconteceu.</label>
+                        <textarea id="reopen-reason" wire:model="reopenReason" required maxlength="10000"></textarea>
+                        <button class="secondary mt-2" type="submit" wire:loading.attr="disabled">Solicitar reabertura</button>
+                    </form>
+                @endif
+                <a class="text-link" href="{{ route('portal.open', ['relacionado' => $ticket['id']]) }}">Abrir chamado vinculado para outro problema</a>
+            </div>
+        @endif
         <dl class="muted mt-5 space-y-2">
             <div><dt class="inline font-medium">Unidade na abertura:</dt> <dd class="inline">{{ $ticket['context']['units']['name'] ?? 'Não informada' }} @if(isset($ticket['context']['units']['city'])) · {{ $ticket['context']['units']['city'] }} @endif</dd></div>
             <div><dt class="inline font-medium">Setor na abertura:</dt> <dd class="inline">{{ $ticket['context']['departments']['name'] ?? 'Não informado' }}</dd></div>
