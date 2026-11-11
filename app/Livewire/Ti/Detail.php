@@ -38,6 +38,26 @@ class Detail extends Component
         }
     }
 
+    public function chooseAction(string $action, TicketOperations $service): void
+    {
+        $actor = auth()->user();
+        $ticket = $service->ticket($actor, $this->ticketId);
+        abort_unless(isset($service->availableActions($actor, $ticket)[$action]), 403);
+
+        $this->resetValidation();
+        $this->action = $action;
+        $this->input = array_intersect_key((array) $ticket, array_flip(['category_id', 'subcategory_id', 'service_id', 'team_id']));
+        if ($action === 'take_triage') {
+            $teams = $service->triageTeams($actor, $ticket);
+            if (count($teams) === 1) {
+                $this->input['team_id'] = array_key_first($teams);
+                $this->save($service);
+            }
+        } elseif (in_array($action, ['triage', 'start'], true)) {
+            $this->save($service);
+        }
+    }
+
     public function updatedAction(): void
     {
         foreach (['body', 'reason', 'useful', 'protocol', 'restoration', 'priority', 'user_id'] as $field) {
@@ -63,7 +83,9 @@ class Detail extends Component
 
     public function render()
     {
-        $ticket = app(TicketOperations::class)->ticket(auth()->user(), $this->ticketId);
+        $actor = auth()->user();
+        $service = app(TicketOperations::class);
+        $ticket = $service->ticket($actor, $this->ticketId);
         $choices = [];
         foreach (['category_id' => 'categories', 'team_id' => 'teams'] as $field => $table) {
             $choices[$field] = DB::table($table)->where('active', true)->orderBy('name')->pluck('name', 'id');
@@ -74,7 +96,10 @@ class Detail extends Component
         $choices['service_id'] = DB::table('services')->where('active', true)
             ->where(fn ($q) => $q->whereNull('category_id')->orWhere('category_id', $category))
             ->where(fn ($q) => $q->whereNull('subcategory_id')->orWhere('subcategory_id', $subcategory))->orderBy('name')->pluck('name', 'id');
-        $team = $this->action === 'assign' ? ($this->input['team_id'] ?? null) : $ticket->team_id;
+        if ($this->action === 'take_triage') {
+            $choices['team_id'] = $service->triageTeams($actor, $ticket);
+        }
+        $team = in_array($this->action, ['assign', 'forward'], true) ? ($this->input['team_id'] ?? null) : $ticket->team_id;
         $choices['user_id'] = filter_var($team, FILTER_VALIDATE_INT) ? DB::table('users')
             ->join('team_members', 'team_members.user_id', '=', 'users.id')->where('team_id', $team)
             ->where('users.active', true)->where('team_members.active', true)
@@ -84,6 +109,8 @@ class Detail extends Component
 
         return view('livewire.ti.detail', [
             'ticket' => $ticket, 'choices' => $choices,
+            'actions' => $service->availableActions($actor, $ticket),
+            'responsibleName' => $ticket->assignee_id ? DB::table('users')->where('id', $ticket->assignee_id)->value('name') : null,
             'requester' => DB::table('users')->where('id', $ticket->requester_id)->first(['name', 'email']),
             'openingContext' => json_decode($ticket->opening_context, true, 512, JSON_THROW_ON_ERROR),
             'comments' => DB::table('comments')->join('users', 'users.id', '=', 'comments.author_id')

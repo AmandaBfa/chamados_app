@@ -6,6 +6,14 @@
         <span>Ciclo {{ $ticket->cycle }}</span>
         <span>Prioridade {{ $ticket->priority ?? 'a validar' }}</span>
     </div>
+    <p><strong>Responsável:</strong> {{ $responsibleName ?? 'A definir' }}</p>
+    @if($ticket->status === 'em_triagem' && $responsibleName)
+        <p class="muted">Revise a classificação, converse com o solicitante ou encaminhe o chamado.</p>
+    @elseif($ticket->status === 'aguardando_solicitante')
+        <p class="muted">A resposta do solicitante retoma o atendimento automaticamente.</p>
+    @elseif($ticket->status === 'aguardando_terceiro')
+        <p class="muted">Retome o atendimento quando receber o retorno do terceiro.</p>
+    @endif
     <section class="rounded-lg border border-slate-300 p-4 dark:border-slate-600" aria-labelledby="requester-title">
         <h2 id="requester-title">Solicitante</h2>
         <dl class="mt-3 grid gap-3 break-words sm:grid-cols-2">
@@ -22,19 +30,24 @@
     <p>Processo afetado: {{ $ticket->affected_process }} · Abrangência: {{ $ticket->impact_scope }} · Condição: {{ str_replace('_', ' ', $ticket->work_condition) }}</p>
     @if ($ticket->reopen_requested_at)<p class="font-semibold">Reabertura solicitada pelo colaborador.</p>@endif
     <x-portal-errors />
-    <form wire:submit="save" class="space-y-3">
-        <label class="block">Ação
-            <select class="field" wire:model.live="action" required>
-                <option value="">Selecione</option>
-                @foreach (['triage' => 'Iniciar triagem', 'classify' => 'Classificar', 'start' => 'Iniciar atendimento', 'assign' => 'Atribuir ou transferir', 'claim' => 'Assumir', 'collaborate' => 'Designar colaborador técnico', 'reply' => 'Enviar resposta pública', 'note' => 'Registrar nota interna', 'wait_requester' => 'Aguardar solicitante', 'wait_third' => 'Aguardar terceiro', 'resume' => 'Retomar atendimento', 'resolve' => 'Resolver', 'cancel' => 'Cancelar', 'reopen' => 'Validar reabertura', 'decline_reopen' => 'Recusar reabertura'] as $value => $label)
-                    <option value="{{ $value }}">{{ $label }}</option>
+    @if($actions)
+        <section class="space-y-3" aria-labelledby="ticket-actions-title">
+            <h2 id="ticket-actions-title">Ações disponíveis</h2>
+            <div class="flex flex-wrap gap-2">
+                @foreach($actions as $key => $label)
+                    <button type="button" class="{{ $loop->first || $action === $key ? 'primary' : 'secondary' }}"
+                        wire:click="chooseAction('{{ $key }}')" wire:loading.attr="disabled">{{ $label }}</button>
                 @endforeach
-            </select>
-        </label>
-        @foreach (['category_id' => 'Categoria', 'subcategory_id' => 'Subcategoria', 'service_id' => 'Serviço', 'team_id' => 'Equipe', 'user_id' => 'Técnico'] as $field => $label)
-            @if ((in_array($action, ['classify', 'resolve']) && in_array($field, ['category_id', 'subcategory_id', 'service_id'])) || ($action === 'assign' && in_array($field, ['team_id', 'user_id'])) || ($action === 'collaborate' && $field === 'user_id'))
+            </div>
+        </section>
+    @endif
+    @if(isset($actions[$action]) && !in_array($action, ['triage', 'start'], true))
+    <form wire:submit="save" class="panel space-y-3" wire:key="ticket-action-{{ $action }}">
+        <h2>{{ $actions[$action] }}</h2>
+        @foreach (['category_id' => 'Categoria', 'subcategory_id' => 'Subcategoria', 'service_id' => 'Serviço', 'team_id' => 'Equipe', 'user_id' => $action === 'forward' ? 'Novo responsável' : 'Técnico'] as $field => $label)
+            @if ((in_array($action, ['classify', 'resolve']) && in_array($field, ['category_id', 'subcategory_id', 'service_id'])) || ($action === 'forward' && in_array($field, ['team_id', 'user_id'])) || ($action === 'take_triage' && $field === 'team_id') || ($action === 'collaborate' && $field === 'user_id'))
                 <label class="block">{{ $label }}
-                    <select class="field" wire:model.live="input.{{ $field }}">
+                    <select class="field" wire:model.live="input.{{ $field }}" @required(in_array($action, ['forward', 'take_triage'], true))>
                         <option value="">Selecione</option>
                         @foreach ($choices[$field] as $id => $name)<option value="{{ $id }}">{{ $name }}</option>@endforeach
                     </select>
@@ -63,11 +76,12 @@
         @if ($action === 'resolve')
             <label class="block">Restauração temporária, se aplicável <textarea class="field" wire:model="input.restoration"></textarea></label>
         @endif
-        @if (in_array($action, ['assign', 'collaborate', 'classify', 'wait_requester', 'resume', 'cancel', 'reopen', 'decline_reopen']))
-            <label class="block">Justificativa <textarea class="field" wire:model="input.reason"></textarea></label>
+        @if (in_array($action, ['forward', 'collaborate', 'classify', 'wait_requester', 'resume', 'cancel', 'reopen', 'decline_reopen']))
+            <label class="block">{{ $action === 'forward' ? 'Motivo do encaminhamento' : 'Justificativa' }} <textarea class="field" wire:model="input.reason" @required(in_array($action, ['forward', 'collaborate', 'resume', 'cancel', 'reopen', 'decline_reopen'], true))></textarea></label>
         @endif
-        <button class="primary" type="submit" wire:loading.attr="disabled">Registrar ação</button>
+        <button class="primary" type="submit" wire:loading.attr="disabled">Confirmar</button>
     </form>
+    @endif
     <h2 class="text-xl font-semibold">Conversa</h2>
     @foreach ($comments as $comment)
         <article class="rounded border p-3 {{ $comment->visibility === 'internal' ? 'border-amber-500' : 'border-sky-500' }}">
@@ -81,7 +95,7 @@
     <h2 class="text-xl font-semibold">Histórico</h2>
     @foreach ($events as $event)
         <details class="rounded border p-3">
-            <summary>{{ $event->public_summary ?? (['ticket.note' => 'Nota interna', 'ticket.triage' => 'Triagem iniciada', 'ticket.assign' => 'Atribuição atualizada', 'ticket.claim' => 'Chamado assumido', 'ticket.classify' => 'Classificação atualizada', 'ticket.collaborate' => 'Colaboração designada'][$event->event_type] ?? $event->event_type) }} · {{ $event->name }} · {{ \Illuminate\Support\Carbon::parse($event->occurred_at)->setTimezone(config('installation.display_timezone'))->format('d/m/Y H:i:s') }}</summary>
+            <summary>{{ $event->public_summary ?? (['ticket.note' => 'Nota interna', 'ticket.triage' => 'Triagem iniciada', 'ticket.take_triage' => 'Triagem assumida', 'ticket.forward' => 'Chamado encaminhado', 'ticket.assign' => 'Atribuição atualizada', 'ticket.claim' => 'Chamado assumido', 'ticket.classify' => 'Classificação atualizada', 'ticket.collaborate' => 'Colaboração designada'][$event->event_type] ?? $event->event_type) }} · {{ $event->name }} · {{ \Illuminate\Support\Carbon::parse($event->occurred_at)->setTimezone(config('installation.display_timezone'))->format('d/m/Y H:i:s') }}</summary>
             <pre class="whitespace-pre-wrap break-all">{{ json_encode(json_decode($event->details), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
         </details>
     @endforeach

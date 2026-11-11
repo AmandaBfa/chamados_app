@@ -74,26 +74,75 @@ class TicketOperations
         return $ticket;
     }
 
+    private function capabilities(User $actor, object $ticket): array
+    {
+        $responsible = $ticket->assignee_id === $actor->id;
+        $participant = DB::table('ticket_participants')->where('ticket_id', $ticket->id)->where('user_id', $actor->id)->exists();
+        $member = DB::table('team_members')->join('teams', 'teams.id', '=', 'team_members.team_id')
+            ->where('team_id', $ticket->team_id)->where('user_id', $actor->id)
+            ->where('team_members.active', true)->where('teams.active', true)->exists();
+        $lead = $this->hasRole($actor, [RoleName::Support, RoleName::Manager])
+            || ($actor->hasRole(RoleName::Analyst) && ($member || $responsible));
+        $canRespond = $lead || (($responsible || $participant) && $actor->hasRole(RoleName::Developer))
+            || ($participant && $actor->hasRole(RoleName::Analyst));
+
+        return compact('responsible', 'participant', 'member', 'lead', 'canRespond');
+    }
+
+    public function triageTeams(User $actor, object $ticket): array
+    {
+        return DB::table('teams')->join('team_members', 'team_members.team_id', '=', 'teams.id')
+            ->where('team_members.user_id', $actor->id)->where('team_members.active', true)->where('teams.active', true)
+            ->when($ticket->team_id, fn ($query) => $query->where('teams.id', $ticket->team_id))
+            ->orderBy('teams.name')->pluck('teams.name', 'teams.id')->all();
+    }
+
+    public function availableActions(User $actor, object $ticket): array
+    {
+        ['responsible' => $responsible, 'participant' => $participant, 'member' => $member,
+            'lead' => $lead, 'canRespond' => $canRespond] = $this->capabilities($actor, $ticket);
+        $canResolve = $lead || ($responsible && $actor->hasRole(RoleName::Developer));
+        $hasAssignee = $ticket->assignee_id !== null;
+        $waiting = in_array($ticket->status, ['aguardando_solicitante', 'aguardando_terceiro'], true);
+        $working = in_array($ticket->status, ['em_triagem', 'em_atendimento'], true);
+        $new = $ticket->status === 'novo';
+        $inProgress = $new || $working || $waiting;
+        $canTakeTriage = $lead && ($new || ($ticket->status === 'em_triagem' && ! $hasAssignee))
+            && (! $hasAssignee || $responsible) && $this->triageTeams($actor, $ticket) !== [];
+
+        return array_filter([
+            'take_triage' => $canTakeTriage ? 'Assumir e iniciar triagem' : null,
+            'triage' => $new && ! $canTakeTriage && ($lead || $actor->hasRole(RoleName::Apprentice)) ? 'Iniciar triagem' : null,
+            'classify' => $lead && $working ? 'Classificar' : null,
+            'reply' => $canRespond && ($working || $waiting) ? 'Responder ao colaborador' : null,
+            'note' => ($working || $waiting) && ($canRespond || $member || $participant || $responsible) ? 'Registrar nota interna' : null,
+            'start' => $canRespond && $hasAssignee && $ticket->status === 'em_triagem' ? 'Continuar atendimento' : null,
+            'forward' => $lead && ($working || $waiting) ? 'Encaminhar' : null,
+            'collaborate' => $lead && $ticket->team_id && ($working || $waiting) ? 'Designar colaborador técnico' : null,
+            'wait_requester' => $canRespond && $ticket->status === 'em_atendimento'
+                && ($ticket->priority !== 'P1' || $actor->hasRole(RoleName::Manager)) ? 'Aguardar solicitante' : null,
+            'wait_third' => $canRespond && $ticket->status === 'em_atendimento' ? 'Aguardar terceiro' : null,
+            'resume' => $canRespond && $waiting ? 'Retomar atendimento' : null,
+            'resolve' => $canResolve && $hasAssignee && $working ? 'Resolver' : null,
+            'cancel' => $lead && $inProgress ? 'Cancelar chamado' : null,
+            'reopen' => $canResolve && $ticket->reopen_requested_at && in_array($ticket->status, ['resolvido', 'fechado'], true) ? 'Validar reabertura' : null,
+            'decline_reopen' => $canResolve && $ticket->reopen_requested_at && in_array($ticket->status, ['resolvido', 'fechado'], true) ? 'Recusar reabertura' : null,
+        ]);
+    }
+
     public function act(User $actor, int $id, int $version, string $action, array $input): void
     {
         $this->ticket($actor, $id);
         DB::transaction(function () use ($actor, $id, $version, $action, $input) {
-            if (in_array($action, ['assign', 'claim', 'collaborate', 'classify', 'resolve'], true)) {
+            if (in_array($action, ['assign', 'claim', 'take_triage', 'forward', 'collaborate', 'classify', 'resolve'], true)) {
                 DB::select('SELECT pg_advisory_xact_lock(73003)');
             }
             $locked = DB::table('tickets')->where('id', $id)->lockForUpdate()->firstOrFail();
             $this->ticket($actor, $id);
             $this->check($locked->lock_version === $version, 'O chamado foi atualizado. Recarregue antes de tentar novamente.');
             $active = in_array($locked->status, ['novo', 'em_triagem', 'em_atendimento', 'aguardando_solicitante', 'aguardando_terceiro'], true);
-            $responsible = $locked->assignee_id === $actor->id;
-            $participant = DB::table('ticket_participants')->where('ticket_id', $id)->where('user_id', $actor->id)->exists();
-            $member = DB::table('team_members')->join('teams', 'teams.id', '=', 'team_members.team_id')
-                ->where('team_id', $locked->team_id)->where('user_id', $actor->id)
-                ->where('team_members.active', true)->where('teams.active', true)->exists();
-            $lead = $this->hasRole($actor, [RoleName::Support, RoleName::Manager])
-                || ($actor->hasRole(RoleName::Analyst) && ($member || $responsible));
-            $canRespond = $lead || (($responsible || $participant) && $actor->hasRole(RoleName::Developer))
-                || ($participant && $actor->hasRole(RoleName::Analyst));
+            ['responsible' => $responsible, 'participant' => $participant, 'member' => $member,
+                'lead' => $lead, 'canRespond' => $canRespond] = $this->capabilities($actor, $locked);
             $this->check($active || in_array($action, ['reopen', 'decline_reopen', 'note'], true), 'A ação requer um chamado em andamento.');
 
             $input = array_map(fn ($value) => is_string($value) && trim($value) === '' ? null : $value, $input);
@@ -131,17 +180,31 @@ class TicketOperations
                     $changes['status'] = 'em_atendimento';
                     $summary = 'Atendimento iniciado.';
                     break;
+                case 'take_triage':
+                case 'forward':
                 case 'assign':
                 case 'claim':
                 case 'collaborate':
                     abort_unless($lead, 403);
-                    $team = $action === 'assign' ? ($data['team_id'] ?? null) : $locked->team_id;
-                    $user = $action === 'claim' ? $actor->id : ($data['user_id'] ?? null);
+                    $takingTriage = $action === 'take_triage';
+                    $selfAssignment = $takingTriage || $action === 'claim';
+                    $team = in_array($action, ['assign', 'forward'], true) ? ($data['team_id'] ?? null) : $locked->team_id;
+                    if ($takingTriage) {
+                        $this->check($locked->status === 'novo' || ($locked->status === 'em_triagem' && ! $locked->assignee_id),
+                            'Este chamado já passou da etapa de assumir a triagem.');
+                        $teams = $this->triageTeams($actor, $locked);
+                        $team = $data['team_id'] ?? (count($teams) === 1 ? array_key_first($teams) : null);
+                        $this->check($team !== null && isset($teams[$team]), 'Selecione uma equipe ativa da qual você faz parte.');
+                    }
+                    $user = $selfAssignment ? $actor->id : ($data['user_id'] ?? null);
                     $this->check($team && DB::table('teams')->where('id', $team)->where('active', true)->exists(), 'Selecione uma equipe ativa.');
-                    if ($action === 'claim') {
+                    if ($selfAssignment) {
                         $this->check($locked->assignee_id === null || $responsible, 'O chamado já possui responsável.');
                     } else {
                         $this->check($reason !== '', 'Informe a justificativa.');
+                    }
+                    if ($action === 'forward') {
+                        $this->check($locked->status !== 'novo' && $user !== null, 'Inicie a triagem e selecione o novo responsável.');
                     }
                     if ($user) {
                         $user = (int) $user;
@@ -164,7 +227,10 @@ class TicketOperations
                         DB::table('ticket_participants')->where('ticket_id', $id)->delete();
                     }
                     $changes = ['team_id' => $team, 'assignee_id' => $user];
-                    if ($action === 'claim' && in_array($locked->status, ['novo', 'em_triagem'], true)) {
+                    if ($takingTriage) {
+                        $changes['status'] = 'em_triagem';
+                    } elseif (($action === 'claim' && in_array($locked->status, ['novo', 'em_triagem'], true))
+                        || ($action === 'forward' && $locked->status === 'em_triagem')) {
                         $changes['status'] = 'em_atendimento';
                     } elseif ($locked->status === 'novo') {
                         $changes['status'] = 'em_triagem';
@@ -191,7 +257,8 @@ class TicketOperations
                     break;
                 case 'wait_third':
                     abort_unless($canRespond, 403);
-                    $this->check($locked->status === 'em_atendimento' && $body !== '' && trim($data['protocol'] ?? '') !== '', 'Informe dependência e protocolo durante o atendimento.');
+                    $this->check($locked->status === 'em_atendimento', 'Inicie o atendimento antes de colocar o chamado em espera por terceiro.');
+                    $this->check($body !== '' && trim($data['protocol'] ?? '') !== '', 'Informe o fornecedor ou dependência e o protocolo do terceiro.');
                     $changes['status'] = 'aguardando_terceiro';
                     $details += ['dependency' => $body, 'protocol' => trim($data['protocol'])];
                     $summary = 'O chamado aguarda retorno de terceiro.';

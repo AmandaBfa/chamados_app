@@ -59,6 +59,39 @@ class TicketOperationsTest extends TestCase
         ], (string) Str::uuid());
     }
 
+    public function test_support_takes_triage_and_forwards_from_the_detail(): void
+    {
+        $requester = $this->login(RoleName::Collaborator);
+        $ticket = $this->open($requester);
+        $analyst = $this->login(RoleName::Analyst);
+        $staff = $this->login(RoleName::Support);
+        $supportTeam = DB::table('teams')->insertGetId(['name' => 'Suporte '.Str::uuid()]);
+        $systemsTeam = DB::table('teams')->insertGetId(['name' => 'Sistemas '.Str::uuid()]);
+        DB::table('team_members')->insert([
+            ['team_id' => $supportTeam, 'user_id' => $staff->id],
+            ['team_id' => $systemsTeam, 'user_id' => $analyst->id],
+        ]);
+
+        Livewire::test(Detail::class, ['ticketId' => $ticket->id])
+            ->assertSee('Assumir e iniciar triagem')
+            ->assertDontSee('Aguardar terceiro')
+            ->call('chooseAction', 'take_triage')->assertHasNoErrors();
+        $this->assertDatabaseHas('tickets', ['id' => $ticket->id, 'status' => 'em_triagem', 'team_id' => $supportTeam, 'assignee_id' => $staff->id]);
+
+        Livewire::test(Detail::class, ['ticketId' => $ticket->id])
+            ->assertSee('Responder ao colaborador')
+            ->assertDontSee('Aguardar terceiro')
+            ->call('chooseAction', 'forward')
+            ->set('input.team_id', $systemsTeam)
+            ->set('input.user_id', $analyst->id)
+            ->set('input.reason', 'Análise pelo responsável pelo sistema')
+            ->call('save')->assertHasNoErrors();
+        $this->assertDatabaseHas('tickets', ['id' => $ticket->id, 'status' => 'em_atendimento', 'team_id' => $systemsTeam, 'assignee_id' => $analyst->id]);
+        $this->assertDatabaseHas('ticket_events', ['ticket_id' => $ticket->id, 'event_type' => 'ticket.forward']);
+        $this->asUser($analyst);
+        Livewire::test(Detail::class, ['ticketId' => $ticket->id])->assertSee('Aguardar terceiro');
+    }
+
     public function test_flow_records_public_and_internal_actions_waits_and_reopening(): void
     {
         $requester = $this->login(RoleName::Collaborator);
