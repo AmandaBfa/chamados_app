@@ -38,4 +38,4 @@ Use duas contas fictícias, solicitante e suporte, e uma equipe ativa com o téc
 5. Com administrador autorizado e MFA, desative um técnico fictício com chamado aberto e confira a indicação **Redistribuir**. Teste a fila com contas de perfis diferentes e verifique que Segurança da informação não aparece na fila comum.
 6. Confira foco e rótulos via teclado, contraste em ambos os temas e disposição em janela de 390 px. Verifique que a tabela tem região própria de rolagem.
 
-Roteiro visual e humano pendente. Fechamento automático após 27 horas de cobertura, relógios, alertas, prazos e efeitos de prioridade seguem nas etapas correspondentes. A liberação de chamados restritos depende de validação com DPO, gerente e analista de rede.
+Conclusão dos testes manuais informada pela operadora em 11/11/2026. Fechamento automático após 27 horas de cobertura, relógios, alertas, prazos e efeitos de prioridade seguem nas etapas correspondentes. A liberação de chamados restritos depende de validação com DPO, gerente e analista de rede.

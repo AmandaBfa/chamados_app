@@ -10,7 +10,7 @@ Atualizado em 09/11/2026. Escopo executado: etapas 1–4 e implementação parci
 | 2. Autenticação e permissões | Concluída para desenvolvimento/piloto; 34 testes/385 assertions aprovados | Conta inicial criada pelo operador; testes manuais da etapa 2 concluídos pelo usuário em 03/11/2026 |
 | 3. Cadastros | Concluída para desenvolvimento/piloto em 03/11/2026; regressão 48 testes/572 assertions | Roteiro humano em testes-etapa3.md; etapa 4 somente após nova solicitação |
 | 4. Portal do colaborador | Concluída para desenvolvimento/piloto, com 73 testes e 967 asserções na revalidação | Roteiro humano/visual em testes-etapa4.md. Etapa 5 somente após nova solicitação |
-| 5. Atendimento do TI | Parcial | Validar roteiro humano e definir concessão a restritos com DPO, gerente e analista de rede |
+| 5. Atendimento do TI | Concluída no escopo do atendimento comum | Validação da concessão a chamados restritos adiada |
 | 6. Motor de SLA | Não iniciada | Calendários/versionamento, ciclos, dois relógios, pausas e testes de borda |
 | 7. Alertas e dashboards | Não iniciada | Deduplicação, escalonamento, indicadores e reconciliação por filtros |
 | 8. Homologação e implantação | Não iniciada | Aprovações corporativas, rede/hospedagem, HTTPS, backup/restauração, segurança e piloto |
@@ -278,7 +278,7 @@ Próxima etapa: **atendimento do TI**, somente após nova solicitação. Não fo
 
 ## Etapa 5 — atendimento do TI (09/11/2026)
 
-**Parcial.** A fila comum e o fluxo humano estão implementados em Livewire, com filtros combináveis, busca, paginação, classificação, atribuição, colaboradores técnicos, conversa pública e interna, transições, histórico, reabertura e redistribuição sinalizada. A integração operacional dos chamados restritos depende da definição de acesso com DPO, gerente e analista de rede. A salvaguarda temporária exclui Segurança da informação da fila comum e exige concessão individual na leitura técnica. O portal pessoal continua disponível ao solicitante.
+**Concluída no escopo do atendimento comum.** A fila comum e o fluxo humano estão implementados em Livewire, com filtros combináveis, busca, paginação, classificação, atribuição, colaboradores técnicos, conversa pública e interna, transições, histórico, reabertura e redistribuição sinalizada. A integração operacional dos chamados restritos depende da definição de acesso com DPO, gerente e analista de rede. A salvaguarda temporária exclui Segurança da informação da fila comum e exige concessão individual na leitura técnica. O portal pessoal continua disponível ao solicitante.
 
 | Verificação | Resultado |
 |---|---|
@@ -291,11 +291,11 @@ Próxima etapa: **atendimento do TI**, somente após nova solicitação. Não fo
 | Revalidação focada após reforçar bloqueio e escopo | Aprovada, 2 testes e 46 asserções em TicketOperationsTest. Inclui filtros combinados, motivo de cancelamento e ação Livewire negada após retirar a concessão |
 | Pint dos PHP alterados | Aprovado com caminhos explícitos. A tentativa inicial com --dirty falhou pelo controle de propriedade do Git, e a primeira escrita sandbox não tinha acesso ao arquivo de rotas |
 | npm.cmd run build | Aprovado, Vite 7.3.7 |
-| Teste humano e visual | Não executado. Roteiro em testes-etapa5.md |
+| Teste humano e visual | Conclusão dos testes manuais informada pela operadora em 11/11/2026. Roteiro em testes-etapa5.md |
 | Consulta técnica | APIs reaproveitadas do código local e de dependências instaladas. Sem necessidade de confirmar versão ou instalar dependências novas |
 
-A primeira resposta humana usa marcação explícita pelo técnico em retorno público com texto. Os eventos registram início/fim das esperas, instante, ator, antes/depois, ciclo e justificativa conforme a ação. Cancelamento tem desfecho separado de resolução. Transferência preserva o ciclo. A próxima etapa depende da validação do fluxo humano, dos eventos e do isolamento, incluindo a definição da rota de restritos. Os testes de integração de prazos, violações, saldo de reabertura e fechamento automático de 27 horas de cobertura pertencem à etapa 6. Não houve push nem implantação.
+A primeira resposta humana usa marcação explícita pelo técnico em retorno público com texto. Os eventos registram início/fim das esperas, instante, ator, antes/depois, ciclo e justificativa conforme a ação. Cancelamento tem desfecho separado de resolução. Transferência preserva o ciclo. A validação da rota de restritos com DPO, gerente e analista de rede fica para uma etapa futura. Os testes de integração de prazos, violações, saldo de reabertura e fechamento automático de 27 horas de cobertura pertencem à etapa 6. A implementação foi publicada na main em 11/11/2026.
 
 ### Teste manual da etapa 5
 
-A operadora informou que parou no teste 4 de testes-etapa5.md. Retomar desse item para validar resolução, confirmação, reabertura e cancelamento. A conclusão do teste 4 e dos itens seguintes ainda não foi registrada.
+Em 11/11/2026, a operadora confirmou a conclusão dos testes manuais e adiou a validação corporativa de acesso aos chamados restritos. O atendimento comum foi concluído. A implementação e o fluxo simplificado de triagem foram publicados na main nos commits fd35a46 e cf97f76.

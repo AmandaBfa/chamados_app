@@ -34,7 +34,7 @@ Etapas 2–4: AC03/AC04 atendidos na autenticação; AC01/AC02 verificados no po
 | 1–4 | decisões, arquitetura e distribuição isolada | 1, 8 | Base Laravel/Livewire/Tailwind e PostgreSQL configurado; instalação isolada documentada; produção pendente |
 | 5–6 | usuários, identidades, funções, equipes, cadastro controlado e MFA administrativo | 2–3 | Autenticação, sete perfis, convites, MFA, desativação/sessões, auditoria e organização implementados; CatalogTest cobre membros, referências, vínculos e ausência de autoelevação |
 | 7–8 | abertura e catálogo integral | 3–4 | Catálogo, abertura idempotente, snapshot de contexto, próprios chamados, comentário e anexos privados implementados/testados; sem classificação automática/SLA |
-| 9–10 | fluxo, colaboração, prioridades e histórico | 5 | Fluxo humano comum implementado. Rota corporativa de restritos e homologação manual pendentes |
+| 9–10 | fluxo, colaboração, prioridades e histórico | 5 | Fluxo comum implementado e testes manuais concluídos segundo a operadora em 11/11/2026. Validação da rota de restritos adiada |
 | 11 | calendário e dois relógios versionados | 6 | Apenas modelo proposto; sem implementação |
 | 12 | alertas e escalonamento | 7 | Infraestrutura de fila preparada; sem jobs de negócio |
 | 13 | três experiências, temas e acessibilidade | 1, 4–5, 8 | Portal pessoal, administração e área TI implementados. Homologação visual e de acessibilidade pendente |
