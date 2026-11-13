@@ -7,6 +7,9 @@
         <span>Prioridade {{ $ticket->priority ?? 'a validar' }}</span>
     </div>
     <p><strong>Responsável:</strong> {{ $responsibleName ?? 'A definir' }}</p>
+    @if($sla)
+        <x-ticket-sla :sla="$sla" :version="$ticket->sla_version_id" />
+    @endif
     @if($ticket->status === 'em_triagem' && $responsibleName)
         <p class="muted">Revise a classificação, converse com o solicitante ou encaminhe o chamado.</p>
     @elseif($ticket->status === 'aguardando_solicitante')
@@ -55,12 +58,39 @@
             @endif
         @endforeach
         @if ($action === 'classify')
+            <div class="grid gap-3 sm:grid-cols-2">
+                <label>Impacto no negócio
+                    <select class="field" wire:model.live="input.business_impact">
+                        <option value="">Avaliar</option>
+                        <option value="alto">Alto · processo essencial ou unidade amplamente afetada</option>
+                        <option value="medio">Médio · equipe ou processo relevante</option>
+                        <option value="baixo">Baixo · situação localizada</option>
+                    </select>
+                </label>
+                <label>Urgência
+                    <select class="field" wire:model.live="input.urgency">
+                        <option value="">Avaliar</option>
+                        <option value="alta">Alta · bloqueio sem alternativa e necessidade imediata</option>
+                        <option value="media">Média · prejuízo com alternativa limitada</option>
+                        <option value="baixa">Baixa · pode aguardar</option>
+                    </select>
+                </label>
+            </div>
+            @if($suggestion)<p role="status">Prioridade sugerida pela matriz: {{ $suggestion }}. Valide a prioridade abaixo.</p>@endif
             <label class="block">Prioridade
                 <select class="field" wire:model="input.priority"><option value="">Manter atual</option>
                     @foreach (['P1', 'P2', 'P3', 'P4'] as $priority)<option>{{ $priority }}</option>@endforeach
                 </select>
             </label>
             <p>Justifique mudanças pela combinação de impacto no negócio e urgência.</p>
+            @if($ticket->status === 'aguardando_solicitante' && $ticket->priority !== 'P1')
+                <p>Alterar para P1 retoma o relógio de solução durante a espera.</p>
+                @if(auth()->user()->hasRole(\App\Enums\RoleName::Manager))
+                    <label class="block"><input type="checkbox" wire:model="input.keep_p1_pause">
+                        Manter a pausa ao alterar para P1 por exceção gerencial. Inclua o motivo na justificativa.
+                    </label>
+                @endif
+            @endif
         @endif
         @if (in_array($action, ['reply', 'note', 'wait_requester', 'wait_third', 'resolve']))
             <label class="block">{{ ['reply' => 'Resposta pública', 'note' => 'Nota interna, visível somente ao TI autorizado', 'wait_requester' => 'Pergunta pública indispensável', 'wait_third' => 'Fornecedor ou dependência', 'resolve' => 'Solução comunicada ao solicitante'][$action] }}
@@ -95,7 +125,7 @@
     <h2 class="text-xl font-semibold">Histórico</h2>
     @foreach ($events as $event)
         <details class="rounded border p-3">
-            <summary>{{ $event->public_summary ?? (['ticket.note' => 'Nota interna', 'ticket.triage' => 'Triagem iniciada', 'ticket.take_triage' => 'Triagem assumida', 'ticket.forward' => 'Chamado encaminhado', 'ticket.assign' => 'Atribuição atualizada', 'ticket.claim' => 'Chamado assumido', 'ticket.classify' => 'Classificação atualizada', 'ticket.collaborate' => 'Colaboração designada'][$event->event_type] ?? $event->event_type) }} · {{ $event->name }} · {{ \Illuminate\Support\Carbon::parse($event->occurred_at)->setTimezone(config('installation.display_timezone'))->format('d/m/Y H:i:s') }}</summary>
+            <summary>{{ $event->public_summary ?? (['ticket.note' => 'Nota interna', 'ticket.triage' => 'Triagem iniciada', 'ticket.take_triage' => 'Triagem assumida', 'ticket.forward' => 'Chamado encaminhado', 'ticket.assign' => 'Atribuição atualizada', 'ticket.claim' => 'Chamado assumido', 'ticket.classify' => 'Classificação atualizada', 'ticket.collaborate' => 'Colaboração designada'][$event->event_type] ?? $event->event_type) }} · {{ $event->name ?? 'Sistema' }} · {{ \Illuminate\Support\Carbon::parse($event->occurred_at)->setTimezone(config('installation.display_timezone'))->format('d/m/Y H:i:s') }}</summary>
             <pre class="whitespace-pre-wrap break-all">{{ json_encode(json_decode($event->details), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
         </details>
     @endforeach

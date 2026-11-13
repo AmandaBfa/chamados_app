@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Services\Sla\TicketSla;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -41,11 +42,13 @@ class RequesterTickets
                     $row = $requester->$field ? DB::table($table)->find($requester->$field) : null;
                     $context[$table] = $row ? ['id' => $row->id, 'name' => $row->name] + ($table === 'units' ? ['city' => $row->city] : []) : null;
                 }
+                $openedAt = CarbonImmutable::now('UTC');
                 $id = DB::table('tickets')->insertGetId($data + [
                     'protocol' => 'CH-'.strtoupper((string) Str::ulid()), 'idempotency_key' => $key,
                     'requester_id' => $requester->id, 'unit_id' => $requester->unit_id, 'department_id' => $requester->department_id,
                     'opening_context' => json_encode($context, JSON_THROW_ON_ERROR), 'type' => 'incidente',
-                    'status' => 'novo', 'related_ticket_id' => $related, 'created_at' => now(), 'updated_at' => now(),
+                    'status' => 'novo', 'related_ticket_id' => $related, 'created_at' => $openedAt, 'updated_at' => $openedAt,
+                    'sla_version_id' => TicketSla::effectiveVersion($openedAt),
                     'restricted' => ($previous && ($previous->restricted || TicketOperations::securityCategory($previous->category_id)))
                         || TicketOperations::securityCategory($data['category_id']),
                 ]);

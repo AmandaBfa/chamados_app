@@ -12,6 +12,7 @@
                     <p>Pedido de reabertura aguardando avaliação do TI.</p>
                 @else
                     @if($ticket['status'] === 'resolvido')
+                        <p>Se não houver contestação, o chamado será fechado automaticamente após 27 horas de cobertura do TI.</p>
                         <button type="button" class="secondary" wire:click="solution('confirm')" wire:loading.attr="disabled">Confirmar solução</button>
                     @endif
                     <form wire:submit="solution('request_reopen')">

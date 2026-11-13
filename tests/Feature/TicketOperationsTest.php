@@ -8,7 +8,9 @@ use App\Livewire\Ti\Queue;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\RequesterTickets;
+use App\Services\Sla\TicketSla;
 use App\Services\TicketOperations;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -57,6 +59,109 @@ class TicketOperationsTest extends TestCase
             'category_id' => $category, 'impact_scope' => 'equipe', 'affected_process' => 'Processo fictício',
             'work_condition' => 'impedido', 'started_unknown' => true,
         ], (string) Str::uuid());
+    }
+
+    public function test_sla_tracks_late_priority_pauses_transfer_reopening_and_automatic_close(): void
+    {
+        $at = fn (string $date) => CarbonImmutable::parse($date, 'America/Sao_Paulo')->utc();
+        $this->travelTo($at('2026-11-13 16:00'));
+        $requester = $this->login(RoleName::Collaborator);
+        $ticket = $this->open($requester);
+        $staff = $this->login(RoleName::Support);
+        $team = DB::table('teams')->insertGetId(['name' => 'Equipe fictícia '.Str::uuid()]);
+        DB::table('team_members')->insert(['team_id' => $team, 'user_id' => $staff->id]);
+        $service = app(TicketOperations::class);
+        $sla = app(TicketSla::class);
+        $latest = fn () => DB::table('tickets')->find($ticket->id);
+        $snapshot = fn () => $sla->snapshot($latest(), CarbonImmutable::now('UTC'));
+        $act = fn ($action, $input = []) => $service->act($staff, $ticket->id, $latest()->lock_version, $action, $input);
+        $classification = ['category_id' => $ticket->category_id, 'reason' => 'Impacto do teste'];
+        $act('take_triage');
+        $act('start');
+        $this->travelTo($at('2026-11-13 16:30'));
+        $act('wait_requester', ['body' => 'Qual tela apresentou erro?']);
+        $this->travelTo($at('2026-11-16 08:45'));
+        $act('classify', $classification + ['priority' => 'P2']);
+        $this->assertTrue($snapshot()['breaches'][1]['response']->eq($at('2026-11-13 17:00')));
+        $this->assertSame(1800, $snapshot()['clocks']['solution']['used']);
+        $this->assertSame(4500, $snapshot()['paused_seconds']);
+        $this->assertNull($snapshot()['clocks']['solution']['due']);
+        $act('classify', $classification + ['priority' => 'P1']);
+        $this->assertFalse($snapshot()['paused']);
+        $this->assertTrue($snapshot()['clocks']['solution']['due']->eq($at('2026-11-16 12:15')));
+        $this->asUser($requester);
+        app(RequesterTickets::class)->comment($requester, $ticket->id, 'Na tela inicial', (string) Str::uuid());
+        $this->asUser($staff);
+        $act('wait_third', ['body' => 'Fornecedor de teste', 'protocol' => 'FOR-1']);
+        $this->travelTo($at('2026-11-16 12:15'));
+        $this->assertArrayNotHasKey('solution', $snapshot()['breaches'][1]);
+        $this->travelTo($at('2026-11-16 12:15:01'));
+        $this->assertTrue($snapshot()['breaches'][1]['solution']->eq($at('2026-11-16 12:15')));
+        $due = $snapshot()['clocks']['solution']['due'];
+        $act('assign', ['team_id' => $team, 'user_id' => $staff->id, 'reason' => 'Redistribuição']);
+        $this->assertTrue($snapshot()['clocks']['solution']['due']->eq($due));
+        $act('resume', ['reason' => 'Terceiro retornou']);
+        $act('classify', $classification + ['priority' => 'P4']);
+        $this->assertDatabaseHas('sla_breaches', ['ticket_id' => $ticket->id, 'cycle' => 1, 'clock' => 'solution']);
+        $act('resolve', $classification + ['body' => 'Restabelecido']);
+        $this->asUser($requester);
+        $service->requesterAction($requester, $ticket->id, $latest()->lock_version, 'request_reopen', 'Mesmo erro');
+        $this->asUser($staff);
+        $act('reopen', ['reason' => 'Mesmo problema confirmado']);
+        $this->assertSame(2, $snapshot()['cycle']);
+        $this->assertArrayHasKey('solution', $snapshot()['breaches'][2]);
+        $this->assertSame('sem resposta', $snapshot()['clocks']['response']['end']);
+        $act('resolve', $classification + ['body' => 'Restabelecido novamente']);
+        $this->asUser($requester);
+        $service->requesterAction($requester, $ticket->id, $latest()->lock_version, 'request_reopen', 'Contesto a solução');
+        $eligible = $snapshot()['close_at'];
+        $this->travelTo($eligible);
+        $sla->process($ticket->id, $eligible);
+        $this->assertSame('resolvido', $latest()->status);
+        $this->asUser($staff);
+        $act('decline_reopen', ['reason' => 'O relato descreve outro problema']);
+        $sla->process($ticket->id, $eligible);
+        $sla->process($ticket->id, $eligible);
+        $this->assertSame('fechado', $latest()->status);
+        $this->assertSame(1, DB::table('ticket_events')->where('ticket_id', $ticket->id)->where('event_type', 'ticket.auto_closed')->count());
+    }
+
+    public function test_sla_configuration_requires_roles_and_preserves_previous_versions(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-12-01 08:00', 'America/Sao_Paulo')->utc());
+        $requester = $this->login(RoleName::Collaborator);
+        $previous = $this->open($requester);
+        $admin = $this->login(RoleName::Administrator);
+        $admin->forceFill([
+            'two_factor_secret' => Fortify::currentEncrypter()->encrypt((new Google2FA)->generateSecretKey()),
+            'two_factor_confirmed_at' => now(),
+        ])->save();
+        $this->withSession(['mfa.user_id' => $admin->id, 'auth.password_confirmed_at' => now()->timestamp]);
+        $this->get(route('sla.index'))->assertOk();
+        $this->post(route('sla.store'), [
+            'base_version_id' => $previous->sla_version_id,
+            'timezone' => 'America/Sao_Paulo',
+            'weekly_windows' => json_encode(array_fill(1, 5, [['08:00', '17:00']])),
+            'exceptions' => '{"2026-12-01":[]}',
+            'targets' => ['P1' => [15, 240], 'P2' => [60, 540], 'P3' => [240, 1620], 'P4' => [540, 2700]],
+            'reason' => 'Feriado fictício para teste',
+        ])->assertRedirect(route('sla.index'));
+        $version = DB::table('sla_versions')->where('configured_by', $admin->id)->firstOrFail();
+        $this->assertNull($version->effective_at);
+        $this->post(route('sla.approve', $version->id))->assertForbidden();
+        $manager = $this->login(RoleName::Manager);
+        $this->post(route('sla.store'))->assertForbidden();
+        $this->post(route('sla.approve', $version->id))->assertRedirect(route('sla.index'));
+        $this->assertDatabaseHas('sla_versions', ['id' => $version->id, 'approved_by' => $manager->id]);
+        $this->asUser($requester);
+        $this->get(route('sla.index'))->assertForbidden();
+        $next = $this->open($requester);
+        $this->assertSame($version->id, $next->sla_version_id);
+        $this->assertDatabaseHas('tickets', ['id' => $previous->id, 'sla_version_id' => $previous->sla_version_id]);
+        $now = CarbonImmutable::now('UTC')->addHour();
+        $sla = app(TicketSla::class);
+        $this->assertSame(3600, $sla->snapshot($previous, $now)['clocks']['response']['used']);
+        $this->assertSame(0, $sla->snapshot($next, $now)['clocks']['response']['used']);
     }
 
     public function test_support_takes_triage_and_forwards_from_the_detail(): void

@@ -4,7 +4,7 @@ Estado: etapas 1–4 implementadas e etapa 5 parcialmente implementada conforme 
 
 ## Fundação implementada
 
-Fundação: cache, cache_locks, jobs, job_batches e failed_jobs. Etapa 2 acrescentou identidade/acesso; etapa 3, organização/catálogos; etapa 4, chamados, comentários, anexos e eventos. Sessões locais usam banco. Não há tabelas/cálculo de SLA implementados.
+Fundação: cache, cache_locks, jobs, job_batches e failed_jobs. Etapa 2 acrescentou identidade/acesso; etapa 3, organização/catálogos; etapa 4, chamados, comentários, anexos e eventos. Sessões locais usam banco. A estrutura de SLA efetivamente implementada está descrita ao final.
 
 ## Entidades, relações e restrições planejadas
 
@@ -102,3 +102,15 @@ A migração incremental adiciona à tabela tickets FKs opcionais para equipe, r
 ticket_participants e ticket_access_grants usam PK composta (ticket_id, user_id) e FKs restritivas. Participação técnica e concessão a chamado restrito são independentes. A validação de atribuição verifica usuário ativo, perfil e vínculo ativo à equipe. Um único assignee_id representa o principal.
 
 ticket_events registra o ciclo e o antes/depois dos campos afetados, além de motivo e vínculos de comentário quando pertinentes. Os intervalos de espera são delimitados pelos eventos de entrada/saída no mesmo ciclo. A reabertura incrementa o ciclo e limpa o marcador de primeira resposta atual, preservando o anterior nos eventos. Os eventos antigos de abertura pertencem ao ciclo 1. A solução mantém o texto público em comments e o detalhe separado de restauração no evento técnico. Nenhuma política ou versão de SLA é gravada nesta etapa.
+
+## Etapa 6 — calendário e relógios
+
+| Tabela | Estrutura efetiva |
+|---|---|
+| sla_versions | Snapshot de calendário e política na mesma versão, com fuso, janelas, exceções e metas em JSONB. Referência à versão base, justificativa, autor, validador e instante de vigência |
+| tickets | FK restritiva sla_version_id. A migração vincula os chamados existentes à versão inicial |
+| ticket_events | Fonte de ciclos, pausas e desfechos. Atores nulos são aceitos apenas para fechamento automático |
+| sla_breaches | PK por chamado, ciclo e relógio. Registra vencimento e detecção de forma idempotente |
+| sla_deadline_revisions | PK por evento de prioridade e relógio. Preserva vencimentos anterior e novo. Vencimento nulo durante pausa indica que o novo prazo depende da retomada |
+
+Os dois relógios são projeções determinísticas dos eventos e da versão vinculada. Alterações de chamado, histórico e revisão de vencimentos são gravadas na mesma transação. Processamento e contestação serializam pelo bloqueio da linha do chamado. A migração é incremental e seu rollback exige tratamento prévio dos eventos automáticos já existentes.

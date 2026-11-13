@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\RoleName;
 use App\Models\User;
+use App\Services\Sla\TicketSla;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -20,6 +22,12 @@ class TicketOperations
     ];
 
     public const STAFF = [RoleName::Support, RoleName::Analyst, RoleName::Manager, RoleName::Developer, RoleName::Apprentice];
+
+    public const PRIORITY_MATRIX = [
+        'alto' => ['alta' => 'P1', 'media' => 'P2', 'baixa' => 'P3'],
+        'medio' => ['alta' => 'P2', 'media' => 'P3', 'baixa' => 'P4'],
+        'baixo' => ['alta' => 'P3', 'media' => 'P4', 'baixa' => 'P4'],
+    ];
 
     public static function securityCategory(int $id): bool
     {
@@ -113,7 +121,7 @@ class TicketOperations
         return array_filter([
             'take_triage' => $canTakeTriage ? 'Assumir e iniciar triagem' : null,
             'triage' => $new && ! $canTakeTriage && ($lead || $actor->hasRole(RoleName::Apprentice)) ? 'Iniciar triagem' : null,
-            'classify' => $lead && $working ? 'Classificar' : null,
+            'classify' => $lead && ($working || $waiting) ? 'Classificar' : null,
             'reply' => $canRespond && ($working || $waiting) ? 'Responder ao colaborador' : null,
             'note' => ($working || $waiting) && ($canRespond || $member || $participant || $responsible) ? 'Registrar nota interna' : null,
             'start' => $canRespond && $hasAssignee && $ticket->status === 'em_triagem' ? 'Continuar atendimento' : null,
@@ -151,8 +159,11 @@ class TicketOperations
                 'team_id' => ['nullable', 'integer'], 'user_id' => ['nullable', 'integer'],
                 'category_id' => ['nullable', 'integer'], 'subcategory_id' => ['nullable', 'integer'], 'service_id' => ['nullable', 'integer'],
                 'priority' => ['nullable', Rule::in(['P1', 'P2', 'P3', 'P4'])],
+                'business_impact' => ['nullable', 'required_with:urgency', Rule::in(array_keys(self::PRIORITY_MATRIX))],
+                'urgency' => ['nullable', 'required_with:business_impact', Rule::in(['alta', 'media', 'baixa'])],
                 'protocol' => ['nullable', 'string', 'max:255'], 'restoration' => ['nullable', 'string', 'max:10000'],
                 'useful' => ['nullable', 'boolean'],
+                'keep_p1_pause' => ['nullable', 'boolean'],
             ])->validate();
             $body = trim($data['body'] ?? '');
             $reason = trim($data['reason'] ?? '');
@@ -172,6 +183,18 @@ class TicketOperations
                     if (isset($data['priority']) && $data['priority'] !== $locked->priority) {
                         $this->check($reason !== '', 'Justifique a alteração de prioridade com impacto e urgência.');
                         $changes['priority'] = $data['priority'];
+                        if ($data['priority'] === 'P1' && $locked->status === 'aguardando_solicitante') {
+                            $keepPause = (bool) ($data['keep_p1_pause'] ?? false);
+                            abort_if($keepPause && ! $actor->hasRole(RoleName::Manager), 403);
+                            $details['solution_paused'] = $keepPause;
+                        }
+                    }
+                    if (isset($data['business_impact'], $data['urgency'])) {
+                        $details += [
+                            'business_impact' => $data['business_impact'],
+                            'urgency' => $data['urgency'],
+                            'suggested_priority' => self::PRIORITY_MATRIX[$data['business_impact']][$data['urgency']],
+                        ];
                     }
                     break;
                 case 'start':
@@ -372,9 +395,10 @@ class TicketOperations
         ]);
     }
 
-    public static function record(object $ticket, int $actor, string $type, array $changes, array $details, ?string $summary): void
+    public static function record(object $ticket, ?int $actor, string $type, array $changes, array $details, ?string $summary,
+        ?CarbonImmutable $instant = null): void
     {
-        $instant = now();
+        $instant = ($instant ?? CarbonImmutable::now('UTC'))->setMicrosecond(0);
         DB::table('tickets')->where('id', $ticket->id)->update($changes + [
             'updated_at' => $instant, 'lock_version' => $ticket->lock_version + 1,
         ]);
@@ -385,5 +409,8 @@ class TicketOperations
                 'before' => array_intersect_key((array) $ticket, $changes), 'after' => $changes], JSON_THROW_ON_ERROR),
             'occurred_at' => $instant,
         ]);
+        if ($ticket->sla_version_id ?? null) {
+            app(TicketSla::class)->persist(DB::table('tickets')->find($ticket->id), $instant);
+        }
     }
 }

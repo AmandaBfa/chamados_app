@@ -11,6 +11,9 @@
             @endif
             @can('catalogs.manage')<a class="primary" href="{{ route('admin.catalogs', 'units') }}">Cadastros e organização</a>@endcan
             @can('users.view')<a class="primary" href="{{ route('admin.users') }}">Administrar usuários</a>@endcan
+            @if(auth()->user()->hasRole(\App\Enums\RoleName::Administrator) || auth()->user()->hasRole(\App\Enums\RoleName::Manager))
+                <a class="secondary" href="{{ route('sla.index') }}">Calendário e políticas de SLA</a>
+            @endif
             @if(auth()->user()->hasRole(\App\Enums\RoleName::Administrator) || auth()->user()->hasEnabledTwoFactorAuthentication())
                 <a class="secondary" href="{{ route('security.show') }}">Segurança da conta</a>
             @endif

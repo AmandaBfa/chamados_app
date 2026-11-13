@@ -1,6 +1,6 @@
 # Sistema de chamados de TI
 
-Etapas 1–4: fundação, autenticação local, administração, cadastros e portal pessoal de chamados. Laravel 13.39.0, Livewire 4.4.8, Tailwind 4.3.3, Vite 7.3.7, Fortify 1.41.0 e PostgreSQL. Não há cadastro público, integração Microsoft, atendimento técnico ou motor de SLA implementados.
+Etapas 1–6: fundação, autenticação local, administração, cadastros, portal pessoal, atendimento do TI e SLA de piloto. Laravel 13.39.0, Livewire 4.4.8, Tailwind 4.3.3, Vite 7.3.7, Fortify 1.41.0 e PostgreSQL.
 
 ## Ambiente
 
@@ -122,7 +122,7 @@ php artisan schedule:list
 php artisan schedule:work
 ~~~
 
-Notificações de acesso são síncronas nesta etapa. Convite é enviado após o commit; falha de SMTP pode deixar conta pendente, recuperável pelo reenvio autenticado. Agenda sem tarefas de negócio, sem SLA/alertas implementados.
+Notificações de acesso são síncronas. Convite é enviado após o commit. Em caso de falha de SMTP, o reenvio autenticado permite recuperar a conta pendente. A agenda executa `sla:processar` a cada minuto para registrar violações e fechar chamados elegíveis. Alertas pertencem à Etapa 7.
 
 ## Verificações e roteiro manual
 
@@ -184,4 +184,8 @@ Validação funcional por HTTP, Livewire e PostgreSQL. A revalidação de 09/11/
 
 ## Atendimento do TI
 
-A fila fica em **Início → Fila do TI** para perfis operacionais habilitados. Consulte a [tabela de transições e o roteiro da etapa 5](docs/testes-etapa5.md). Em ambiente de desenvolvimento isolado, aplique a migração incremental pelo procedimento local descrito neste README. A definição corporativa de concessão a chamados restritos segue pendente com a DPO, o gerente e o analista de rede. Os relógios e o fechamento automático por horas de cobertura pertencem à etapa 6.
+A fila fica em **Início → Fila do TI** para perfis operacionais habilitados. Consulte a [tabela de transições e o roteiro da etapa 5](docs/testes-etapa5.md). A definição corporativa de concessão a chamados restritos segue pendente com a DPO, o gerente e o analista de rede.
+
+## SLA de piloto
+
+Em uma instalação local isolada, aplique as migrações incrementais pelo procedimento acima. Em **Início → Calendário e políticas de SLA**, um administrador propõe a versão e a gerência valida. O detalhe do chamado no TI calcula os relógios no momento da consulta. Rode `php artisan schedule:work` no ambiente local ou execute `php artisan sla:processar` para processar imediatamente as violações e os fechamentos elegíveis. Consulte o [roteiro de testes da Etapa 6](docs/testes-etapa6.md).

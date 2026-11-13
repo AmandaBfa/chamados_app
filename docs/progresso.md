@@ -1,6 +1,6 @@
 # Progresso — sistema de chamados de TI
 
-Atualizado em 09/11/2026. Escopo executado: etapas 1–4 e implementação parcial da etapa 5, com resultados e histórico separados abaixo. A documentação original foi lida integralmente e copiada sem alteração para especificacao.md. SHA-256: 7885ee818100b1ac35445e4f39bbcaed2be533f67db9bac9930e4700fc089688.
+Atualizado em 13/11/2026. Escopo executado: etapas 1–6, com resultados e histórico separados abaixo. A documentação original permanece em especificacao.md. SHA-256: 7885ee818100b1ac35445e4f39bbcaed2be533f67db9bac9930e4700fc089688.
 
 ## Oito etapas autorizáveis
 
@@ -11,7 +11,7 @@ Atualizado em 09/11/2026. Escopo executado: etapas 1–4 e implementação parci
 | 3. Cadastros | Concluída para desenvolvimento/piloto em 03/11/2026; regressão 48 testes/572 assertions | Roteiro humano em testes-etapa3.md; etapa 4 somente após nova solicitação |
 | 4. Portal do colaborador | Concluída para desenvolvimento/piloto, com 73 testes e 967 asserções na revalidação | Roteiro humano/visual em testes-etapa4.md. Etapa 5 somente após nova solicitação |
 | 5. Atendimento do TI | Concluída no escopo do atendimento comum | Validação da concessão a chamados restritos adiada |
-| 6. Motor de SLA | Não iniciada | Calendários/versionamento, ciclos, dois relógios, pausas e testes de borda |
+| 6. Motor de SLA | Implementado para desenvolvimento e piloto | Evidências e limites ao final |
 | 7. Alertas e dashboards | Não iniciada | Deduplicação, escalonamento, indicadores e reconciliação por filtros |
 | 8. Homologação e implantação | Não iniciada | Aprovações corporativas, rede/hospedagem, HTTPS, backup/restauração, segurança e piloto |
 
@@ -299,3 +299,24 @@ A primeira resposta humana usa marcação explícita pelo técnico em retorno p�
 ### Teste manual da etapa 5
 
 Em 11/11/2026, a operadora confirmou a conclusão dos testes manuais e adiou a validação corporativa de acesso aos chamados restritos. O atendimento comum foi concluído. A implementação e o fluxo simplificado de triagem foram publicados na main nos commits fd35a46 e cf97f76.
+
+## Etapa 6 — calendário, prioridades e SLA (13/11/2026)
+
+Calendário, metas, sugestão de prioridade, relógios, fechamento e versionamento integrados aos eventos da etapa 5. Chamados anteriores vinculados à versão inicial. A recusa de reabertura libera o fechamento pelo prazo original. O roteiro local está em testes-etapa6.md.
+
+| Verificação | Resultado |
+|---|---|
+| Migração incremental em chamados_test | Aprovada após confirmar via SQL banco e usuário de teste em loopback |
+| Primeira regressão PHPUnit | Falhou em oito casos por comparar o nome do fuso UTC com o equivalente +00:00. A asserção passou a conferir o deslocamento |
+| Regressão intermediária | Falhou em fixture de senha recente que usava tempo real com relógio congelado. Fixture corrigida |
+| Primeiro ensaio de fechamento concorrente | A disputa concluiu, mas a limpeza falhou na FK de perfil do solicitante fictício. O teste passou a remover esse vínculo antes da conta |
+| `php vendor/bin/phpunit --testsuite Unit,Feature,PostgreSQL` | Aprovado no PostgreSQL dedicado, com 89 testes e 1119 asserções, incluindo fechamento concorrente |
+| Inspeção visual e migração em desenvolvimento | Não executadas nesta rodada. Migração validada somente no PostgreSQL dedicado |
+
+Aprovação corporativa das metas, feriados reais, exceções e homologação visual seguem pendentes. A etapa 7 depende de nova solicitação e usa eventos e violações persistidos para alertas e indicadores.
+
+**Ponto de atenção — interface e teste manual.** A operadora achou a interface de SLA confusa na primeira avaliação e decidiu adiar a validação manual. Na retomada, identificar quais telas ou ações geram dúvida e executar o roteiro em `testes-etapa6.md`.
+
+### Correção da instalação local (13/11/2026)
+
+`GET /administracao/sla` retornou SQLSTATE 42P01 porque `sla_versions` ainda não existia em `chamados_dev`. Após verificar via SQL o banco, o usuário e a conexão em loopback, foi executado `migrate --path=database/migrations/2026_11_11_000001_create_sla_tables.php`. A migração passou, a consulta da versão vigente retornou 1 e a contagem de chamados sem versão retornou 0. A página autenticada não foi reaberta nesta verificação.

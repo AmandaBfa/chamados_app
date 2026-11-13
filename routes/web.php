@@ -4,6 +4,7 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MfaChallengeController;
 use App\Http\Controllers\PasswordRecoveryController;
 use App\Http\Controllers\SecurityController;
+use App\Http\Controllers\SlaPolicyController;
 use App\Http\Controllers\TicketAttachmentController;
 use App\Services\CatalogDefinition;
 use App\Services\PortalAccess;
@@ -66,6 +67,12 @@ Route::middleware('auth')->group(function () {
                 ->whereNumber(['ticket', 'attachment'])->name('portal.attachment');
         });
         Route::view('/inicio', 'home')->middleware('admin.mfa')->name('home');
+        Route::middleware(['admin.mfa', 'password.confirm'])->group(function () {
+            Route::get('/administracao/sla', [SlaPolicyController::class, 'index'])->name('sla.index');
+            Route::post('/administracao/sla', [SlaPolicyController::class, 'store'])->name('sla.store');
+            Route::post('/administracao/sla/{version}/validar', [SlaPolicyController::class, 'approve'])
+                ->whereNumber('version')->name('sla.approve');
+        });
         Route::middleware(['password.confirm', 'throttle:access-sensitive'])->group(function () {
             Route::get('/seguranca', [SecurityController::class, 'show'])->name('security.show');
             Route::post('/seguranca/ativar', [SecurityController::class, 'enable'])->name('security.enable');

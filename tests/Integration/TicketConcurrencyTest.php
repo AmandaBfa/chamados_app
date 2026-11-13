@@ -110,6 +110,61 @@ class TicketConcurrencyTest extends TestCase
         }
     }
 
+    public function test_automatic_close_serializes_with_a_reopening_request(): void
+    {
+        $this->assertSame('pgsql', config('database.default'));
+        $this->assertEmpty(config('database.connections.pgsql.url'));
+        $identity = DB::selectOne('SELECT current_database() AS database, current_user AS username');
+        $this->assertSame('chamados_test', $identity->database);
+        $this->assertSame('chamados_test', $identity->username);
+        $key = (string) Str::uuid();
+        $processes = [];
+        $actor = User::factory()->create();
+        $category = $ticket = null;
+        try {
+            session(['auth.version' => $actor->auth_version]);
+            $category = DB::table('categories')->insertGetId(['name' => 'Categoria fictícia '.$key]);
+            $this->travelTo(now()->subDays(14));
+            $ticket = app(RequesterTickets::class)->open($actor, [
+                'subject' => 'Fechamento concorrente', 'description' => 'Dados fictícios.',
+                'category_id' => $category, 'impact_scope' => 'pessoa', 'affected_process' => 'Teste',
+                'work_condition' => 'continua', 'started_unknown' => true,
+            ], $key);
+            DB::transaction(fn () => \App\Services\TicketOperations::record(
+                $ticket, $actor->id, 'ticket.resolve', ['status' => 'resolvido'], [], 'Resolvido para teste.'
+            ));
+            $this->travelBack();
+            $arguments = array_map(fn ($action) => [(string) $actor->id, (string) $ticket->id, '1', $action], ['close', 'contest']);
+            [$processed, $contest] = $this->runWorkers($arguments, $processes);
+            $this->assertSame('processed', $processed);
+            $this->assertContains($contest, ['contested', 'conflict']);
+            $row = DB::table('tickets')->find($ticket->id);
+            if ($contest === 'contested') {
+                $this->assertSame('resolvido', $row->status);
+                $this->assertNotNull($row->reopen_requested_at);
+            } else {
+                $this->assertSame('fechado', $row->status);
+                $this->assertNull($row->reopen_requested_at);
+            }
+        } finally {
+            $this->travelBack();
+            foreach ($processes as $process) {
+                if ($process->isRunning()) {
+                    $process->stop();
+                }
+            }
+            if ($ticket) {
+                DB::table('ticket_events')->where('ticket_id', $ticket->id)->delete();
+                DB::table('tickets')->where('id', $ticket->id)->delete();
+            }
+            if ($category) {
+                DB::table('categories')->where('id', $category)->delete();
+            }
+            $actor->roles()->detach();
+            $actor->delete();
+        }
+    }
+
     private function runWorkers(array $arguments, array &$processes): array
     {
         $streams = [];

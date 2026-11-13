@@ -27,6 +27,23 @@ flush();
 if (trim((string) fgets(STDIN)) !== 'GO') {
     exit(2);
 }
+if (($argv[4] ?? '') === 'close') {
+    app(\App\Services\Sla\TicketSla::class)->process((int) $argv[2]);
+    echo "\"processed\"\n";
+    exit;
+}
+if (($argv[4] ?? '') === 'contest') {
+    try {
+        app(TicketOperations::class)->requesterAction($actor, (int) $argv[2], (int) $argv[3], 'request_reopen', 'Mesmo problema');
+        echo "\"contested\"\n";
+    } catch (ValidationException $exception) {
+        if (! str_contains($exception->errors()['operation'][0] ?? '', 'Recarregue')) {
+            throw $exception;
+        }
+        echo "\"conflict\"\n";
+    }
+    exit;
+}
 if (($argv[4] ?? '') === 'claim') {
     try {
         app(TicketOperations::class)->act($actor, (int) $argv[2], (int) $argv[3], 'claim', []);

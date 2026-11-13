@@ -3,6 +3,8 @@
 namespace App\Livewire\Ti;
 
 use App\Services\TicketOperations;
+use App\Services\Sla\TicketSla;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -60,7 +62,7 @@ class Detail extends Component
 
     public function updatedAction(): void
     {
-        foreach (['body', 'reason', 'useful', 'protocol', 'restoration', 'priority', 'user_id'] as $field) {
+        foreach (['body', 'reason', 'useful', 'protocol', 'restoration', 'priority', 'user_id', 'business_impact', 'urgency', 'keep_p1_pause'] as $field) {
             unset($this->input[$field]);
         }
     }
@@ -86,6 +88,9 @@ class Detail extends Component
         $actor = auth()->user();
         $service = app(TicketOperations::class);
         $ticket = $service->ticket($actor, $this->ticketId);
+        $impact = $this->input['business_impact'] ?? null;
+        $urgency = $this->input['urgency'] ?? null;
+        $suggestion = is_string($impact) && is_string($urgency) ? TicketOperations::PRIORITY_MATRIX[$impact][$urgency] ?? null : null;
         $choices = [];
         foreach (['category_id' => 'categories', 'team_id' => 'teams'] as $field => $table) {
             $choices[$field] = DB::table($table)->where('active', true)->orderBy('name')->pluck('name', 'id');
@@ -108,14 +113,15 @@ class Detail extends Component
             ->orderBy('users.name')->pluck('users.name', 'users.id') : [];
 
         return view('livewire.ti.detail', [
-            'ticket' => $ticket, 'choices' => $choices,
+            'ticket' => $ticket, 'choices' => $choices, 'suggestion' => $suggestion,
+            'sla' => app(TicketSla::class)->snapshot($ticket, CarbonImmutable::now('UTC')),
             'actions' => $service->availableActions($actor, $ticket),
             'responsibleName' => $ticket->assignee_id ? DB::table('users')->where('id', $ticket->assignee_id)->value('name') : null,
             'requester' => DB::table('users')->where('id', $ticket->requester_id)->first(['name', 'email']),
             'openingContext' => json_decode($ticket->opening_context, true, 512, JSON_THROW_ON_ERROR),
             'comments' => DB::table('comments')->join('users', 'users.id', '=', 'comments.author_id')
                 ->where('ticket_id', $ticket->id)->orderBy('comments.id')->get(['comments.body', 'comments.visibility', 'users.name']),
-            'events' => DB::table('ticket_events')->join('users', 'users.id', '=', 'ticket_events.actor_id')
+            'events' => DB::table('ticket_events')->leftJoin('users', 'users.id', '=', 'ticket_events.actor_id')
                 ->where('ticket_id', $ticket->id)->orderBy('ticket_events.id')->get(['ticket_events.*', 'users.name']),
             'attachments' => DB::table('attachments')->where('ticket_id', $ticket->id)->get(['id', 'download_name']),
         ]);
