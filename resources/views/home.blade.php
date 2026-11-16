@@ -8,6 +8,10 @@
             <a class="secondary" href="{{ route('portal.index') }}">Meus chamados</a>
             @if(collect(\App\Services\TicketOperations::STAFF)->contains(fn ($role) => auth()->user()->hasRole($role)))
                 <a class="secondary" href="{{ route('ti.index') }}">Fila do TI</a>
+                <a class="secondary" href="{{ route('ti.alerts') }}">Alertas do TI</a>
+                @if(auth()->user()->hasRole(\App\Enums\RoleName::Manager))
+                    <a class="secondary" href="{{ route('ti.dashboard') }}">Indicadores de TI</a>
+                @endif
             @endif
             @can('catalogs.manage')<a class="primary" href="{{ route('admin.catalogs', 'units') }}">Cadastros e organização</a>@endcan
             @can('users.view')<a class="primary" href="{{ route('admin.users') }}">Administrar usuários</a>@endcan

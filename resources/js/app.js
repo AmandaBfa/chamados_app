@@ -1,3 +1,5 @@
+import './sla-calendar';
+
 const themeButton = document.getElementById('theme-toggle');
 function updateThemeButton() {
     const dark = document.documentElement.classList.contains('dark');

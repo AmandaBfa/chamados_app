@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'reporting' => [
+        'reopen_window_days' => 7,
+        'time_percentiles' => [50, 90],
+    ],
     // Proposta da especificação para desenvolvimento/piloto; limites por envio.
     'max_files' => 5,
     'max_file_kb' => 10240,

@@ -320,3 +320,37 @@ Aprovação corporativa das metas, feriados reais, exceções e homologação vi
 ### Correção da instalação local (13/11/2026)
 
 `GET /administracao/sla` retornou SQLSTATE 42P01 porque `sla_versions` ainda não existia em `chamados_dev`. Após verificar via SQL o banco, o usuário e a conexão em loopback, foi executado `migrate --path=database/migrations/2026_11_11_000001_create_sla_tables.php`. A migração passou, a consulta da versão vigente retornou 1 e a contagem de chamados sem versão retornou 0. A página autenticada não foi reaberta nesta verificação.
+
+## Etapa 7 — alertas, envelhecimento e indicadores (13/11/2026)
+
+**Parcial.** Alertas operacionais, fila de envelhecimento e três abas de indicadores estão disponíveis no ambiente local. Suspeita crítica na abertura, estatísticas de tempo e taxa de reabertura aguardam decisão sobre critérios ou população. O painel mostra a contagem de eventos de reabertura. Estoque histórico e exportação proposta ficaram fora da implementação. Roteiro em testes-etapa7.md.
+
+| Verificação | Resultado |
+|---|---|
+| Regressão prévia da etapa 6 | Aprovada, 89 testes e 1.119 asserções. A primeira tentativa com sandbox falhou na leitura do autoload pelo PHPUnit |
+| Migração incremental | Aprovada em chamados_test e chamados_dev, em loopback. Primeira tentativa de comando para desenvolvimento falhou na interpretação de aspas antes da migração. Reexecução com script PHP validou a identidade do banco e aplicou somente a migração nova |
+| Teste focado | Aprovado, 4 testes e 81 asserções em 6,46 s, pico de 64 MB. Rodadas anteriores revelaram problemas nas fixtures de perfis e desativação, e no seletor JSON de cidade. Corrigidos antes da regressão |
+| PHPUnit Unit,Feature,PostgreSQL | Aprovado, 93 testes e 1.200 asserções em 45,81 s na rodada final, pico de 76 MB |
+| Vite e Pint | Build aprovado, CSS de 67,91 kB e JS de 0,39 kB. Pint executado nos PHP da etapa |
+| Mailpit e inspeção visual | Não executados. Worker real com transporte em memória e renderização HTTP/Livewire cobertos por testes. Validação de SMTP local, celular, teclado e tema no navegador pendentes |
+| Desempenho | Lotes de 100 e páginas de 20. Tempos medidos acima são da suíte, com dados fictícios pequenos. Carga representativa e tempo de resposta sob volume não medidos |
+
+Avanço condicionado a reconciliar as populações pendentes, validar entregas e telas no piloto e verificar a leitura de restritos no escopo aprovado. Nenhuma etapa seguinte iniciada.
+
+### Complemento das regras do piloto
+
+O alerta de suspeita crítica sinaliza trabalho impedido com abrangência de equipe, unidade ou maior, antes da classificação e dentro da cobertura. O painel calcula taxa pela primeira resolução no período, com janela completa de sete dias corridos, e conta reaberturas validadas pelo TI. Mediana e P90 exibem minutos corridos até a primeira resposta e até a resolução de cada ciclo. As regras estão em configuração. Teste focado aprovado com 5 testes e 98 asserções no PostgreSQL dedicado. A regressão de 93 testes acima corresponde à versão anterior deste complemento. Homologação visual e Mailpit interativo continuam pendentes.
+
+### Revalidação da Etapa 7 (16/11/2026)
+
+- `php vendor/bin/phpunit --testsuite Unit,Feature,PostgreSQL` aprovado no PostgreSQL local dedicado, com 94 testes e 1.217 asserções em 67,50 s e pico de 76 MB.
+- Captura SMTP em loopback aprovada com `scripts/iniciar-mailpit.ps1` e o transportador configurado da aplicação. Uma mensagem fictícia para um endereço `example.invalid` chegou ao Mailpit, com protocolo e link conferidos pela API local. A instância iniciada para o ensaio foi encerrada. Na suíte, o worker real continua exercitado separadamente com transporte em memória.
+- O roteiro interativo no navegador permanece pendente para celular, temas, foco e teclado.
+
+### Editor de calendário do SLA (16/11/2026)
+
+Base de feriados de Goiânia (GO) para 2026 e 2027, com edição mensal e observações versionadas. Migração incremental aprovada em chamados_test e chamados_dev. Build Vite aprovado. A primeira regressão encontrou um erro de compilação Blade na tela de SLA, corrigido e verificado na rodada final com 94 testes e 1.222 asserções. No Edge headless, uma página fictícia com o JavaScript do editor confirmou importação, preservação de exceção existente e edição de horário e observação. A sessão autenticada no navegador ficou pendente.
+
+### Validação manual confirmada pela operadora
+
+A operadora confirmou a conclusão das verificações manuais solicitadas para a Etapa 7, incluindo o calendário em sessão autenticada e as telas nos dois temas, em celular e com teclado. O estoque histórico segue como pendência e a exportação proposta ficou fora da entrega. A validação do piloto não constitui aprovação corporativa para produção.

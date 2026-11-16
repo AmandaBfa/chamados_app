@@ -5,7 +5,9 @@ use App\Http\Controllers\MfaChallengeController;
 use App\Http\Controllers\PasswordRecoveryController;
 use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\SlaPolicyController;
+use App\Http\Controllers\TicketAlertController;
 use App\Http\Controllers\TicketAttachmentController;
+use App\Http\Controllers\TicketDashboardController;
 use App\Services\CatalogDefinition;
 use App\Services\PortalAccess;
 use App\Services\TicketOperations;
@@ -42,6 +44,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('verified')->group(function () {
         Route::middleware('admin.mfa')->group(function () {
             Route::view('/ti/chamados', 'ti.queue')->name('ti.index');
+            Route::get('/ti/alertas', TicketAlertController::class)->name('ti.alerts');
+            Route::get('/ti/indicadores', TicketDashboardController::class)->name('ti.dashboard');
             Route::get('/ti/chamados/{ticket}', function (int $ticket) {
                 app(TicketOperations::class)->ticket(auth()->user(), $ticket);
 

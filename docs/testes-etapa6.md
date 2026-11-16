@@ -9,3 +9,7 @@ Use contas e chamados fictícios em instalação isolada. Aplique a migração i
 5. Resolva e solicite reabertura do mesmo problema. Ao aceitar, confira o novo ciclo e a preservação do saldo e da primeira resposta original. Use os testes com relógio controlado para exercitar a espera de 27 horas, a contestação e a recusa sem aguardar em tempo real.
 
 Regressão local com PostgreSQL dedicado: `php vendor/bin/phpunit --testsuite Unit,Feature,PostgreSQL`.
+
+## Calendário de Goiânia
+
+Em **Calendário e políticas de SLA**, escolha 2026 ou 2027 e clique em **Adicionar feriados de Goiânia (GO)**. Clique em um dia para conferir a observação e a cobertura. Em outra data, selecione **Horário especial**, informe um intervalo e aplique a edição. Envie a proposta e confira o resumo com uma conta gerente antes de validar. A base funciona como proposta de piloto e preserva exceções já cadastradas.

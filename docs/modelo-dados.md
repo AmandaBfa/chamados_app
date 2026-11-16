@@ -114,3 +114,11 @@ ticket_events registra o ciclo e o antes/depois dos campos afetados, além de mo
 | sla_deadline_revisions | PK por evento de prioridade e relógio. Preserva vencimentos anterior e novo. Vencimento nulo durante pausa indica que o novo prazo depende da retomada |
 
 Os dois relógios são projeções determinísticas dos eventos e da versão vinculada. Alterações de chamado, histórico e revisão de vencimentos são gravadas na mesma transação. Processamento e contestação serializam pelo bloqueio da linha do chamado. A migração é incremental e seu rollback exige tratamento prévio dos eventos automáticos já existentes.
+
+## Etapa 7 — alertas e leitura operacional
+
+A migração 2026_11_13_000001_create_ticket_alerts cria ticket_alerts com FKs restritivas para chamado e destinatário, ciclo, relógio, marco, público pretendido, canal, situação, tentativas e instantes UTC. Um índice parcial garante unicidade por chamado/ciclo/relógio/marco/destinatário/canal. Outro registra ausência de destinatário uma vez por público pretendido e marco. As tarefas usam jobs e as falhas finais também entram em failed_jobs.
+
+O índice ticket_events_activity serve à leitura do último movimento. A fila projeta idade, cobertura, inatividade, saldo e vencimentos em tabela temporária descartada ao fim da transação. Os indicadores consultam tickets, ticket_events e sla_breaches. Nenhuma fotografia de estoque foi criada.
+
+A migração 2026_11_16_000001_add_exception_notes_to_sla_versions armazena rótulos e observações de exceções por data no campo JSONB opcional sla_versions.exception_notes. O cálculo continua usando as janelas de sla_versions.exceptions.

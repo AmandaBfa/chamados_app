@@ -189,3 +189,9 @@ A fila fica em **Início → Fila do TI** para perfis operacionais habilitados. 
 ## SLA de piloto
 
 Em uma instalação local isolada, aplique as migrações incrementais pelo procedimento acima. Em **Início → Calendário e políticas de SLA**, um administrador propõe a versão e a gerência valida. O detalhe do chamado no TI calcula os relógios no momento da consulta. Rode `php artisan schedule:work` no ambiente local ou execute `php artisan sla:processar` para processar imediatamente as violações e os fechamentos elegíveis. Consulte o [roteiro de testes da Etapa 6](docs/testes-etapa6.md).
+
+### Etapa 7 — alertas, fila e indicadores
+
+Após aplicar a migração incremental em uma instalação local, execute `php artisan schedule:work` e `php artisan queue:work ticket-alerts --queue=ticket-alerts` em terminais separados. A fila do TI e a caixa de alertas respeitam o escopo técnico do usuário. Indicadores e ocorrências de entrega estão disponíveis para gerentes dentro de seu escopo de leitura.
+
+O e-mail operacional fica desabilitado por padrão. Para ensaio local com contas fictícias, inicie o Mailpit do projeto e configure `TICKET_ALERT_LOCAL_MAIL=true` no ambiente local antes de iniciar o worker. Consulte [o roteiro de teste](docs/testes-etapa7.md) e [o estado da etapa](docs/progresso.md).

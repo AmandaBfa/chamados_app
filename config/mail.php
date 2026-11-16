@@ -36,6 +36,12 @@ return [
     */
 
     'mailers' => [
+        'ticket_alert_capture' => [
+            'transport' => 'smtp',
+            'host' => '127.0.0.1',
+            'port' => 1025,
+            'timeout' => 5,
+        ],
 
         'smtp' => [
             'transport' => 'smtp',

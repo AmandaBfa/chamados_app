@@ -14,10 +14,14 @@
             </label>
         @endforeach
     </div>
+    <label class="inline-flex items-center gap-2"><input type="checkbox" wire:model.live="stale">
+        Mostrar só P3/P4 abertos e parados
+    </label>
+    <p class="muted">A fila mostra P1 primeiro. Depois vêm os prazos vencidos, os menores saldos úteis e os chamados mais antigos.</p>
     <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Tabela de chamados">
         <table class="w-full text-left">
             <thead><tr>
-                @foreach (['Protocolo', 'Assunto', 'Situação', 'Equipe', 'Responsável', 'Categoria', 'Serviço', 'Unidade', 'Prioridade'] as $heading)
+                @foreach (['Protocolo', 'Assunto', 'Situação', 'Equipe', 'Responsável', 'Categoria', 'Serviço', 'Unidade', 'Prioridade', 'Idade e movimentação', 'Saldo de SLA'] as $heading)
                     <th scope="col" class="p-2">{{ $heading }}</th>
                 @endforeach
             </tr></thead>
@@ -36,9 +40,21 @@
                             </td>
                         @endforeach
                         <td class="p-2">{{ $ticket->priority ?? 'A validar' }}</td>
+                        <td class="p-2">
+                            {{ number_format($ticket->age / 3600, 1, ',', '.') }} h corridas
+                            @if ($ticket->business !== null)
+                                <br>{{ number_format($ticket->business / 3600, 1, ',', '.') }} h de cobertura
+                                <br>{{ number_format($ticket->inactive / 3600, 1, ',', '.') }} h úteis sem movimento
+                            @endif
+                            <br><time datetime="{{ $ticket->movement }}">{{ \Carbon\CarbonImmutable::parse($ticket->movement)->setTimezone(config('installation.display_timezone'))->format('d/m/Y H:i') }}</time>
+                        </td>
+                        <td class="p-2">
+                            @if ($ticket->response_overdue || $ticket->solution_overdue)<strong>Vencido</strong><br>@endif
+                            {{ $ticket->balance === null ? '—' : number_format($ticket->balance / 60, 1, ',', '.').' min úteis' }}
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="9" class="p-2">Nenhum chamado encontrado.</td></tr>
+                    <tr><td colspan="11" class="p-2">Nenhum chamado encontrado.</td></tr>
                 @endforelse
             </tbody>
         </table>

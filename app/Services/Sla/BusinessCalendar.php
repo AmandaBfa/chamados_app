@@ -64,6 +64,11 @@ final class BusinessCalendar
         }
     }
 
+    public function covers(CarbonImmutable $instant): bool
+    {
+        return $this->secondsBetween($instant, $instant->addSecond()) === 1;
+    }
+
     public function secondsBetween(CarbonImmutable $from, CarbonImmutable $to): int
     {
         $seconds = 0;

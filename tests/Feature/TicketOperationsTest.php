@@ -137,17 +137,22 @@ class TicketOperationsTest extends TestCase
             'two_factor_confirmed_at' => now(),
         ])->save();
         $this->withSession(['mfa.user_id' => $admin->id, 'auth.password_confirmed_at' => now()->timestamp]);
-        $this->get(route('sla.index'))->assertOk();
+        $this->get(route('sla.index'))->assertOk()->assertSee('Adicionar feriados de Goiânia (GO)')->assertSee('Corpus Christi');
         $this->post(route('sla.store'), [
             'base_version_id' => $previous->sla_version_id,
             'timezone' => 'America/Sao_Paulo',
             'weekly_windows' => json_encode(array_fill(1, 5, [['08:00', '17:00']])),
-            'exceptions' => '{"2026-12-01":[]}',
+            'exceptions' => '{"2026-12-01":[],"2026-12-02":[["08:00","12:00"]]}',
             'targets' => ['P1' => [15, 240], 'P2' => [60, 540], 'P3' => [240, 1620], 'P4' => [540, 2700]],
+            'exception_notes' => '{"2026-12-01":"Sem expediente fictício","2026-12-02":"Expediente até meio-dia"}',
             'reason' => 'Feriado fictício para teste',
         ])->assertRedirect(route('sla.index'));
         $version = DB::table('sla_versions')->where('configured_by', $admin->id)->firstOrFail();
         $this->assertNull($version->effective_at);
+        $this->assertSame('Expediente até meio-dia', json_decode($version->exception_notes, true)['2026-12-02']);
+        $calendar = app(TicketSla::class)->calendar($version->id);
+        $this->assertTrue($calendar->covers(CarbonImmutable::parse('2026-12-02 11:59', 'America/Sao_Paulo')));
+        $this->assertFalse($calendar->covers(CarbonImmutable::parse('2026-12-02 12:00', 'America/Sao_Paulo')));
         $this->post(route('sla.approve', $version->id))->assertForbidden();
         $manager = $this->login(RoleName::Manager);
         $this->post(route('sla.store'))->assertForbidden();

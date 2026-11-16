@@ -23,8 +23,7 @@ final class TicketSla
 
         $now = $now->setMicrosecond(0);
         $version = DB::table('sla_versions')->find($ticket->sla_version_id);
-        $calendar = new BusinessCalendar($version->timezone, json_decode($version->weekly_windows, true),
-            json_decode($version->exceptions, true));
+        $calendar = $this->calendarFrom($version);
         $targets = json_decode($version->targets, true);
         $events = DB::table('ticket_events')->where('ticket_id', $ticket->id)
             ->where('occurred_at', '<=', $now)->orderBy('id')->get()
@@ -120,6 +119,17 @@ final class TicketSla
             'age_seconds' => max(0, $now->timestamp - $opened->timestamp),
             'close_at' => $resolvedAt ? $calendar->addSeconds($resolvedAt, 27 * 3600) : null,
         ];
+    }
+
+    public function calendar(int $versionId): BusinessCalendar
+    {
+        return $this->calendarFrom(DB::table('sla_versions')->find($versionId));
+    }
+
+    private function calendarFrom(object $version): BusinessCalendar
+    {
+        return new BusinessCalendar($version->timezone, json_decode($version->weekly_windows, true),
+            json_decode($version->exceptions, true));
     }
 
     private function newClock(BusinessCalendar $calendar, CarbonImmutable $at, ?int $minutes): array

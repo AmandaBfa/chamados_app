@@ -39,6 +39,16 @@ class TicketOperations
         app(PortalAccess::class)->authorize($actor);
         abort_unless($this->hasRole($actor, self::STAFF), 403);
 
+        return $this->readableBy($actor);
+    }
+
+    // Escopo de leitura reutilizado por processos sem sessão. Rotas devem usar queue().
+    public function readableBy(User $actor): Builder
+    {
+        if (! $this->hasRole($actor, self::STAFF)) {
+            return DB::table('tickets')->whereRaw('false');
+        }
+
         $query = DB::table('tickets')->where(function (Builder $query) use ($actor) {
             $query->where(fn ($common) => $common->where('restricted', false)
                 ->whereNotIn('category_id', DB::table('categories')->where('seed_key', 'category-10')->select('id')))

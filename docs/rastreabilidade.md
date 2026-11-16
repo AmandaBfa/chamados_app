@@ -20,11 +20,11 @@ Etapas 2–4: AC03/AC04 atendidos na autenticação; AC01/AC02 verificados no po
 | AC10 fornecedor não pausa | 5, 6 | TicketOperationsTest verifica o vencimento durante espera com protocolo de terceiro |
 | AC11 prioridade preserva histórico | 5, 6 | TicketOperationsTest cobre cálculo desde abertura na classificação tardia, revisão por reclassificação e persistência da violação após ampliar o prazo |
 | AC12 reabertura com novo ciclo | 5, 6 | TicketOperationsTest cobre novo ciclo, atraso herdado e preservação da primeira resposta original |
-| AC13 deduplicação de alerta | 7 | Pendente |
-| AC14 reconciliação de dashboard | 7 | Pendente |
+| AC13 deduplicação de alerta | 7 | Verificado em TicketMonitoringTest com repetição do detector, fila de banco, unicidade por canal, tentativas, desativação e atraso fora da cobertura. Captura SMTP local verificada com mensagem fictícia no Mailpit |
+| AC14 reconciliação de dashboard | 7 | TicketMonitoringTest reconcilia filtros combinados, ciclos, cancelamento, SLA, vazio, recorrência e restrito com e sem concessão. Complemento de piloto reconcilia coorte de sete dias, mediana e P90 com as listas. Validação manual da etapa confirmada pela operadora |
 | AC15 concorrência | 4, 5, 6 | TicketConcurrencyTest exercita abertura idempotente, assunção exclusiva e disputa entre contestação e fechamento em processos independentes |
 | AC16 validação de arquivos | 4 | Atendido na validação da aplicação: test_invalid_excessive_and_active_uploads_rejected_by_endpoint_and_final_submit, test_valid_image_pdf_text_and_safe_download_names, test_final_submit_revalidates_content_after_temporary_upload, test_failed_attachment_rolls_back_metadata_receipts_and_written_private_files. Não equivale a análise antivírus/homologação de produção |
-| AC17 temas, teclado e celular | 1, 4, 5, 8 | Parcial: tema/layout/rótulos implementados e views renderizadas; inspeção do portal no Edge não iniciada por timeout de autorização da ferramenta. Roteiro humano, celular físico e leitor de tela pendentes |
+| AC17 temas, teclado e celular | 1, 4, 5, 8 | Parcial: tema/layout/rótulos implementados e views renderizadas; inspeção do portal no Edge não iniciada por timeout de autorização da ferramenta. A operadora confirmou a validação manual das telas da Etapa 7, incluindo celular, temas e teclado. Leitor de tela e homologação das demais telas seguem pendentes |
 | AC18 restauração de backup | 8 | Pendente |
 | AC19 cobertura e feriado | 6 | BusinessCalendarTest cobre fora da janela, fim de semana, feriado, exceção de cobertura, limites exatos e almoço contínuo |
 | AC20 políticas históricas | 6 | TicketOperationsTest verifica autorização, vigência da versão validada e preservação do calendário anterior nos chamados vinculados |
@@ -38,10 +38,10 @@ Etapas 2–4: AC03/AC04 atendidos na autenticação; AC01/AC02 verificados no po
 | 7–8 | abertura e catálogo integral | 3–4 | Catálogo, abertura idempotente, snapshot de contexto, próprios chamados, comentário e anexos privados implementados/testados; sem classificação automática/SLA |
 | 9–10 | fluxo, colaboração, prioridades e histórico | 5 | Fluxo comum implementado e testes manuais concluídos segundo a operadora em 11/11/2026. Validação da rota de restritos adiada |
 | 11 | calendário e dois relógios versionados | 6 | Calendário e metas de piloto versionados, relógios projetados dos eventos, revisões e violações persistidas |
-| 12 | alertas e escalonamento | 7 | Infraestrutura de fila preparada; sem jobs de negócio |
+| 12 | alertas e escalonamento | 7 | Detecção agendada, fila, falhas e envelhecimento implementados. Suspeita crítica testada para equipe ou mais com trabalho impedido |
 | 13 | três experiências, temas e acessibilidade | 1, 4–5, 8 | Portal pessoal, administração e área TI implementados. Homologação visual e de acessibilidade pendente |
-| 14 | indicadores e confiabilidade | 7 | Sem dashboard nem números fictícios |
-| 15 | modelo relacional completo | 1–7 | docs/modelo-dados.md descreve estrutura de atendimento e SLA. Alertas pendentes |
+| 14 | indicadores e confiabilidade | 7 | Três abas e detalhamento autorizado. Mediana, P90 e taxa de reabertura no piloto. Estoque histórico pendente |
+| 15 | modelo relacional completo | 1–7 | docs/modelo-dados.md descreve estrutura de atendimento e SLA. Alertas persistidos com deduplicação por destinatário/canal |
 | 16 | autorização, anexos privados, operação e backup | 1–2, 4–5, 8 | Isolamento do portal, upload e download privado testados; antimalware/operação/backup/homologação pendentes |
 | 17 | critérios de aceitação | 2–8 | Tabela acima com evidências e limites por escopo; critérios futuros preservados |
 | 18–20 | execução, validações e manutenção | 1–8 | docs/progresso.md e decisões técnicas; aprovações corporativas preservadas |

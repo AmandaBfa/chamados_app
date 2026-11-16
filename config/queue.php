@@ -35,6 +35,15 @@ return [
             'driver' => 'sync',
         ],
 
+        'ticket-alerts' => [
+            'driver' => 'database',
+            'connection' => 'pgsql',
+            'table' => 'jobs',
+            'queue' => 'ticket-alerts',
+            'retry_after' => 90,
+            'after_commit' => false,
+        ],
+
         'database' => [
             'driver' => 'database',
             'connection' => env('DB_QUEUE_CONNECTION'),
