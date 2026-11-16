@@ -1,6 +1,6 @@
 # Progresso — sistema de chamados de TI
 
-Atualizado em 13/11/2026. Escopo executado: etapas 1–6, com resultados e histórico separados abaixo. A documentação original permanece em especificacao.md. SHA-256: 7885ee818100b1ac35445e4f39bbcaed2be533f67db9bac9930e4700fc089688.
+Atualizado em 16/11/2026. Etapas 1–7 implementadas no escopo registrado, com homologação da etapa 8 parcial. A documentação original permanece em especificacao.md. SHA-256: 7885ee818100b1ac35445e4f39bbcaed2be533f67db9bac9930e4700fc089688.
 
 ## Oito etapas autorizáveis
 
@@ -12,8 +12,8 @@ Atualizado em 13/11/2026. Escopo executado: etapas 1–6, com resultados e hist�
 | 4. Portal do colaborador | Concluída para desenvolvimento/piloto, com 73 testes e 967 asserções na revalidação | Roteiro humano/visual em testes-etapa4.md. Etapa 5 somente após nova solicitação |
 | 5. Atendimento do TI | Concluída no escopo do atendimento comum | Validação da concessão a chamados restritos adiada |
 | 6. Motor de SLA | Implementado para desenvolvimento e piloto | Evidências e limites ao final |
-| 7. Alertas e dashboards | Não iniciada | Deduplicação, escalonamento, indicadores e reconciliação por filtros |
-| 8. Homologação e implantação | Não iniciada | Aprovações corporativas, rede/hospedagem, HTTPS, backup/restauração, segurança e piloto |
+| 7. Alertas e dashboards | Implementada e validada no escopo do piloto | Estoque histórico, exportação proposta e transporte operacional de produção pendentes |
+| 8. Homologação e preparação da implantação | Parcial | AC18 aprovado localmente. Complementar AC17, validar lacunas/decisões empresariais e homologar a infraestrutura autorizada |
 
 Esta divisão detalha a sequência da seção 18 da especificação: autenticação/perfis/auditoria foram separados da fundação pelo pedido explícito. Nenhum requisito foi retirado. Etapas 2–4 foram solicitadas posteriormente; não avançar para etapa 5 sem nova solicitação.
 
@@ -354,3 +354,10 @@ Base de feriados de Goiânia (GO) para 2026 e 2027, com edição mensal e observ
 ### Validação manual confirmada pela operadora
 
 A operadora confirmou a conclusão das verificações manuais solicitadas para a Etapa 7, incluindo o calendário em sessão autenticada e as telas nos dois temas, em celular e com teclado. O estoque histórico segue como pendência e a exportação proposta ficou fora da entrega. A validação do piloto não constitui aprovação corporativa para produção.
+
+## Etapa 8 — homologação parcial (16/11/2026)
+
+- Regressão aprovada no PostgreSQL dedicado com 94 testes e 1.222 asserções. Lockfile atualizado após dez avisos de segurança. Nova consulta Composer e consulta npm sem avisos para os lockfiles verificados. Corrigidos o aviso da página técnica e o tema inicial da área de TI. Edge passou nos cenários do portal em 1366 e 390 px. A validação de celular físico e leitor de tela segue pendente.
+- Backup e restauração aprovados com banco e arquivos isolados, amostra fictícia e permissões conferidas. AC18 atendido no ensaio local. RPO/RTO a validar na instalação autorizada.
+- Comandos, falhas recuperadas, evidência, roteiro manual e piloto em [homologacao.md](homologacao.md). Procedimentos em [operacao.md](operacao.md) e [implantacao.md](implantacao.md). Aprovações e pontos de liberação em [pendencias-producao.md](pendencias-producao.md).
+- Encerrar a homologação com a validação humana restante, decisões empresariais e infraestrutura aprovada. Implantação efetiva exige destino e autorização próprios.

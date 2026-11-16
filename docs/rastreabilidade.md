@@ -6,28 +6,32 @@ Regressão da etapa 5 em 09/11/2026: 76 testes e 1019 asserções aprovados no P
 
 Etapas 2–4: AC03/AC04 atendidos na autenticação; AC01/AC02 verificados no portal pessoal, sem antecipar acesso operacional/notificações do TI. AC05/AC06/AC16 têm evidências funcionais de abertura/anexos; AC17 segue parcial por ausência de homologação visual. Evidências pontuais não substituem fluxos futuros. Numeração de etapas detalha a seção 18 sem modificar a cópia original.
 
-| Critério | Etapa responsável | Estado / evidência atual |
+## Classificação da Etapa 8 — 16/11/2026
+
+A regressão desta etapa confirmou 94 testes e 1.222 asserções em PostgreSQL dedicado. As classificações aplicam-se aos cenários explicitados. [Comandos, condições e limites](homologacao.md)
+
+| Critério | Classificação | Evidência conferida |
 |---|---|---|
-| AC01 acesso a chamado/anexo alheio | 2, 4, 5 | Atendido no portal: RequesterPortalTest::test_own_ticket_and_attachment_isolation_in_get_livewire_search_and_service, test_livewire_ticket_id_is_locked_against_switching_to_another_requester; TicketOperationsTest verifica o escopo de leitura por perfil, restrição na busca, detalhe e download negado e leitura com concessão por fixture. O fluxo corporativo de concessão permanece pendente |
-| AC02 isolamento de notas internas | 4, 5 | Atendido nas respostas do portal: test_internal_notes_events_and_attachments_absent_from_payloads_and_download; nota/evento/anexo internos criados como fixtures e ausentes de GET, Livewire, DTO e download. TicketOperationsTest cria nota no atendimento e verifica sua ausência no detalhe pessoal. Notificações futuras permanecem pendentes |
-| AC03 desativação em sessão aberta | 2 | Atendido: AccessControlTest::test_deactivation_revokes_database_sessions_and_old_session_cannot_return_after_reactivation e test_deactivated_session_is_blocked_on_livewire_update; sessão pendente MFA também bloqueada |
-| AC04 cadastro controlado | 2 | Atendido: GET/POST /register 404; convites autorizados, expiração/uso único, perfis comuns proibidos de administrar e bootstrap restrito; evidências em AccessControlTest |
-| AC05 subcategoria dependente | 3, 4 | Atendido: CatalogTest e RequesterPortalTest::test_category_change_clears_selection_and_server_rejects_incompatible_or_inactive_catalog; FK composta em tickets e preservação de catálogo histórico testadas |
-| AC06 idempotência na abertura | 4 | Atendido: test_livewire_double_submit_and_retry_produce_one_ticket_one_event_and_same_protocol, test_opening_with_upload_via_livewire_is_idempotent_even_after_file_is_consumed e TicketConcurrencyTest com duas conexões/processos independentes |
-| AC07 transferência preserva SLA | 5, 6 | TicketOperationsTest verifica a preservação do vencimento e da violação na atribuição |
-| AC08 sexta 16h + 2h úteis | 6 | BusinessCalendarTest cobre segunda às 9h e deslocamento para terça quando a segunda é feriado |
-| AC09 pausa de solução / retorno | 5, 6 | TicketOperationsTest cobre pergunta pública, pausa da solução atravessando fim de semana, resposta continuando a contar, retomada ao reclassificar para P1 e retorno pelo portal |
-| AC10 fornecedor não pausa | 5, 6 | TicketOperationsTest verifica o vencimento durante espera com protocolo de terceiro |
-| AC11 prioridade preserva histórico | 5, 6 | TicketOperationsTest cobre cálculo desde abertura na classificação tardia, revisão por reclassificação e persistência da violação após ampliar o prazo |
-| AC12 reabertura com novo ciclo | 5, 6 | TicketOperationsTest cobre novo ciclo, atraso herdado e preservação da primeira resposta original |
-| AC13 deduplicação de alerta | 7 | Verificado em TicketMonitoringTest com repetição do detector, fila de banco, unicidade por canal, tentativas, desativação e atraso fora da cobertura. Captura SMTP local verificada com mensagem fictícia no Mailpit |
-| AC14 reconciliação de dashboard | 7 | TicketMonitoringTest reconcilia filtros combinados, ciclos, cancelamento, SLA, vazio, recorrência e restrito com e sem concessão. Complemento de piloto reconcilia coorte de sete dias, mediana e P90 com as listas. Validação manual da etapa confirmada pela operadora |
-| AC15 concorrência | 4, 5, 6 | TicketConcurrencyTest exercita abertura idempotente, assunção exclusiva e disputa entre contestação e fechamento em processos independentes |
-| AC16 validação de arquivos | 4 | Atendido na validação da aplicação: test_invalid_excessive_and_active_uploads_rejected_by_endpoint_and_final_submit, test_valid_image_pdf_text_and_safe_download_names, test_final_submit_revalidates_content_after_temporary_upload, test_failed_attachment_rolls_back_metadata_receipts_and_written_private_files. Não equivale a análise antivírus/homologação de produção |
-| AC17 temas, teclado e celular | 1, 4, 5, 8 | Parcial: tema/layout/rótulos implementados e views renderizadas; inspeção do portal no Edge não iniciada por timeout de autorização da ferramenta. A operadora confirmou a validação manual das telas da Etapa 7, incluindo celular, temas e teclado. Leitor de tela e homologação das demais telas seguem pendentes |
-| AC18 restauração de backup | 8 | Pendente |
-| AC19 cobertura e feriado | 6 | BusinessCalendarTest cobre fora da janela, fim de semana, feriado, exceção de cobertura, limites exatos e almoço contínuo |
-| AC20 políticas históricas | 6 | TicketOperationsTest verifica autorização, vigência da versão validada e preservação do calendário anterior nos chamados vinculados |
+| AC01 acesso a chamado/anexo alheio | Atendido com evidência | `RequesterPortalTest::test_own_ticket_and_attachment_isolation_in_get_livewire_search_and_service` verifica tela, GET direto, Livewire e busca. `TicketOperationsTest` verifica escopo operacional e concessão explícita por fixture. |
+| AC02 isolamento de notas internas | Parcialmente atendido | `RequesterPortalTest::test_internal_notes_events_and_attachments_absent_from_payloads_and_download` confirma ausência em GET, Livewire, DTO e download. `TicketOperationsTest` cria nota técnica e verifica o portal. O produto ainda carece de um fluxo próprio de notificações ao solicitante para comprovar essa parcela. |
+| AC03 desativação em sessão aberta | Atendido com evidência | `AccessControlTest` revoga sessões do banco, nega a atualização Livewire e bloqueia sessão pendente de MFA. Sessão antiga segue inválida após reativação. |
+| AC04 cadastro controlado | Atendido com evidência | `AccessControlTest` verifica GET/POST /register com 404, convite autorizado, expirado/forjado, uso único e impossibilidade de elevação por formulário. |
+| AC05 subcategoria dependente | Atendido com evidência | `RequesterPortalTest` verifica limpeza ao mudar a categoria e rejeição de seleção incompatível ou inativa. `CatalogTest` confirma FK composta e histórico. |
+| AC06 idempotência na abertura | Atendido com evidência | `RequesterPortalTest` repete submissões com e sem arquivo, preserva protocolo e grava um ticket/evento. `TicketConcurrencyTest` reproduz dois processos com mesmo envio. |
+| AC07 transferência preserva SLA | Atendido com evidência | `TicketOperationsTest::test_sla_tracks_late_priority_pauses_transfer_reopening_and_automatic_close` preserva vencimento e violação na atribuição. |
+| AC08 sexta 16h + 2h úteis | Atendido com evidência | `BusinessCalendarTest` obtém segunda às 9h e terça quando segunda é feriado. |
+| AC09 pausa e retorno | Atendido com evidência | `TicketOperationsTest` cobre exigência de pergunta pública, pausa atravessando fim de semana, resposta ativa, reclassificação para P1 e retomada após resposta no portal. |
+| AC10 fornecedor conta normalmente | Atendido com evidência | `TicketOperationsTest` registra espera com protocolo de terceiro e observa vencimento em espera. |
+| AC11 prioridade rastreável | Atendido com evidência | `TicketOperationsTest` verifica classificação tardia, revisão de prazos e preservação de violação após ampliar a meta. |
+| AC12 reabertura com ciclo novo | Atendido com evidência | `TicketOperationsTest` verifica aceitação, novo ciclo, atraso herdado e primeira resposta original preservada. |
+| AC13 deduplicação de alerta | Atendido com evidência | `TicketMonitoringTest` repete detector e verifica unicidade por marco/destinatário/canal, fila de banco, falha, revogação e cobertura. Entrega automatizada usa captura em memória. |
+| AC14 detalhamento de dashboard | Atendido com evidência | `TicketMonitoringTest` reconcilia filtros, contagens, ciclos, SLA, cancelamento, recortes de tempo/reabertura e caso restrito com/sem concessão. A evidência considera o mesmo conjunto de dados e escopo. |
+| AC15 atualização concorrente | Atendido com evidência | `TicketConcurrencyTest` disputa assunção entre dois processos e serializa contestação/fechamento. `TicketOperationsTest` verifica o conflito por versão. |
+| AC16 rejeição de arquivo inválido | Atendido com evidência | `RequesterPortalTest` rejeita tipos, conteúdo, excesso e temporário adulterado, revalida no envio e verifica compensação de metadados/arquivos em falha. Análise antimalware de produção segue em aberto. |
+| AC17 temas, teclado e celular | Parcialmente atendido | Portal verificado no Edge em 1366 e 390 px, nos dois temas, com foco de teclado e contraste amostral. Tema padrão corrigido e verificado no TI. Faltam fila em cartões, cobertura integral em celular físico e leitor de tela. |
+| AC18 restauração com permissões | Atendido com evidência local | Ensaio em origem/destino novos e discos privados separados. Dump e dois anexos restaurados, SHA-256 e seis decisões de download conferidas. Recuperação e verificação em 5,93 s para o conjunto fictício. RPO/RTO corporativo em aberto. |
+| AC19 cobertura e feriados | Atendido com evidência | `BusinessCalendarTest` cobre antes/depois do expediente, fim de semana, feriado, exceção, almoço contínuo e limites exatos. |
+| AC20 versão histórica preservada | Atendido com evidência | `TicketOperationsTest` valida autorização, vigência e cálculo com versões diferentes em tickets anteriores e posteriores. |
 
 ## Requisitos por seção da especificação
 

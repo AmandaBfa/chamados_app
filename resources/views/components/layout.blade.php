@@ -1,11 +1,18 @@
 @props(['title' => 'Sistema de chamados', 'showErrorSummary' => true])
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" @class(['dark' => request()->routeIs('ti.*')])>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title }} · {{ config('app.name') }}</title>
-    <script>try { document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark'); } catch (error) {}</script>
+    <script>
+        try {
+            const theme = localStorage.getItem('theme');
+            if (theme === 'light' || theme === 'dark') {
+                document.documentElement.classList.toggle('dark', theme === 'dark');
+            }
+        } catch (error) {}
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>

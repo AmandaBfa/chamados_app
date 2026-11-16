@@ -1,6 +1,6 @@
 # Sistema de chamados de TI
 
-Etapas 1–6: fundação, autenticação local, administração, cadastros, portal pessoal, atendimento do TI e SLA de piloto. Laravel 13.39.0, Livewire 4.4.8, Tailwind 4.3.3, Vite 7.3.7, Fortify 1.41.0 e PostgreSQL.
+Etapas 1–7 implementadas para desenvolvimento e piloto, com homologação parcial da etapa 8. Laravel 13.40.0, Livewire 4.4.8, Tailwind 4.3.3, Vite 7.3.7, Fortify 1.41.0 e PostgreSQL.
 
 ## Ambiente
 
@@ -88,7 +88,7 @@ O comando pede nome/e-mail fictícios (domínio .test) e senha oculta, duas veze
 
 Entrar em http://127.0.0.1:8000/login, confirmar e-mail pelo Mailpit, confirmar senha e configurar MFA pelo aplicativo autenticador. Administração fica bloqueada até confirmar o fator. Guardar os códigos de recuperação; recuperação por e-mail não remove MFA.
 
-Produção não possui bootstrap público/CLI habilitado por este comando: provisionamento operacional depende de autorização e procedimento na etapa 8.
+O comando de bootstrap atende o ambiente local. O provisionamento do administrador de produção segue as condições de [implantação](docs/implantacao.md#administrador-inicial).
 
 ## Executar
 
@@ -109,7 +109,7 @@ Deixar terminal aberto. Raiz redireciona para login/início; /verificacao manté
 - Desativação/mudança de perfil: auth_version e revogação de sessões/links, sem apagar autoria. Reativação exige novo login.
 - MFA Fortify: TOTP, semente/códigos criptografados, confirmação obrigatória, recuperação de uso único. Não há endpoint de desativação nem reset de fator por e-mail.
 - Auditoria de concessões/estado, aceitação de convite, senha/MFA e login/logout sem segredos; não editável pela interface. Não promete inviolabilidade contra DBA.
-- Armazenamento padrão storage/app/private, sem entrega pública automática; anexos/autorização de chamados serão implementados posteriormente.
+- Anexos em storage/app/private/tickets, com downloads autorizados no servidor e sem entrega pública automática.
 - Sem lembrar sessão persistente na interface. Todas as novas requisições web e Livewire verificam estado e versão.
 
 Esses valores são decisões técnicas iniciais de desenvolvimento/piloto, não políticas corporativas de produção. Retenção, recuperação de perda total de MFA e operação de contas precisam de homologação.
@@ -122,7 +122,7 @@ php artisan schedule:list
 php artisan schedule:work
 ~~~
 
-Notificações de acesso são síncronas. Convite é enviado após o commit. Em caso de falha de SMTP, o reenvio autenticado permite recuperar a conta pendente. A agenda executa `sla:processar` a cada minuto para registrar violações e fechar chamados elegíveis. Alertas pertencem à Etapa 7.
+Notificações de acesso são síncronas. Convite é enviado após o commit. Em caso de falha de SMTP, o reenvio autenticado permite recuperar a conta pendente. A agenda executa `sla:processar` e `alertas:processar` a cada minuto para registrar violações, fechar chamados elegíveis e enfileirar alertas.
 
 ## Verificações e roteiro manual
 
@@ -145,10 +145,10 @@ Roteiros de teste humano: docs/testes-etapa2.md, docs/testes-etapa3.md e docs/te
 - docs/permissoes.md: matriz de ações e escopos.
 - docs/modelo-dados.md: implementado versus proposto.
 - docs/decisoes-tecnicas.md: versões e decisões.
-- docs/rastreabilidade.md: AC03/AC04 com evidência; AC01/AC02 permanecem pendentes.
+- docs/rastreabilidade.md: classificação e evidência para AC01–AC20.
 - docs/progresso.md: estados, comandos, resultados e limitações.
 
-Próxima etapa somente após nova solicitação: atendimento do TI (fila, atribuição, notas internas e transições). Na etapa 4 não houve push, publicação, Microsoft ou alteração de rede corporativa. O envio da etapa 3 ao GitHub foi autorizado separadamente e permanece no histórico.
+A implantação efetiva requer destino e autorização explícitos. Consulte a homologação e o checklist abaixo.
 
 ## Cadastros e organização — etapa 3
 
@@ -172,13 +172,13 @@ Os valores são dados da instalação separada de cada empresa. Não há condiç
 
 Migração incremental 2026_11_03_000002 aplicada nesta instalação local e em testes, sem recriar bancos. Em cópia nova, usar os comandos de migração já descritos; não executar fresh/refresh/rollback no banco existente.
 
-Entrar com conta autorizada, e-mail confirmado e MFA se administrador; no início, escolher **Abrir chamado** ou **Meus chamados**. Rotas: /chamados/abrir, /meus-chamados e /meus-chamados/{id}. Todos os sete perfis podem relatar problemas próprios, conforme decisão explícita do usuário; administrador também vê somente seus chamados neste portal. Chamados/anexos alheios retornam 404. Atendimento técnico é etapa futura, sem acesso operacional implícito por equipe ou perfil.
+Entrar com conta autorizada, e-mail confirmado e MFA se administrador; no início, escolher **Abrir chamado** ou **Meus chamados**. Rotas: /chamados/abrir, /meus-chamados e /meus-chamados/{id}. Todos os sete perfis podem relatar problemas próprios, conforme decisão explícita do usuário; administrador também vê somente seus chamados neste portal. Chamados/anexos alheios retornam 404. A leitura operacional é feita na Fila do TI conforme o escopo do perfil e possíveis concessões explícitas.
 
-Abertura usa solicitante e contexto de unidade/setor do cadastro, categoria/subcategoria dependentes, serviço/equipamento opcionais, descrição, abrangência/processo afetado, condição de trabalho e início aproximado ou desconhecido. Confirmação mostra protocolo único; o mesmo envio é idempotente inclusive sob concorrência. Prioridade começa nula, sem escolha P1/P2 ou prazos calculados. Detalhe oferece conversa/histórico públicos e downloads privados; notas internas não integram as consultas/respostas do portal.
+Abertura usa solicitante e contexto de unidade/setor do cadastro, categoria/subcategoria dependentes, serviço/equipamento opcionais, descrição, abrangência/processo afetado, condição de trabalho e início aproximado ou desconhecido. Confirmação mostra protocolo único; o mesmo envio é idempotente inclusive sob concorrência. A prioridade é definida na triagem e os prazos usam a versão de SLA vinculada. Detalhe oferece conversa/histórico públicos e downloads privados; notas internas não integram as consultas/respostas do portal.
 
 Limites em config/tickets.php: até cinco anexos por abertura/comentário, 10 MB cada, PNG/JPEG/PDF simples/TXT UTF-8. Upload temporário autenticado, vinculado ao usuário, válido por 24 h e de uso único; conteúdo é revalidado ao salvar. Arquivos em storage/app/private/tickets, sem storage:link ou URLs públicas; download autorizado e forçado como arquivo. PDF com indicadores ativos, formulários, criptografia ou objetos comprimidos é recusado conservadoramente. **Não há scanner antivírus nem sanitizador completo de PDF**; análise antimalware, retenção, reconciliação de órfãos e backups de anexos dependem de homologação antes da produção.
 
-Os testes de upload usam discos fictícios separados por processo; testes de escrita usam chamados_test com rollback. O ensaio de concorrência com dois processos precisa de fixtures temporariamente gravadas com commit nesse banco para serem compartilhadas; finally remove exclusivamente os IDs fictícios criados pelo ensaio. Não rodar o worker manualmente nem apontá-lo a outro banco. Não há envio de e-mail na abertura/comentário, exportações, atendimento/SLA ou automações de negócio nesta etapa.
+Os testes de upload usam discos fictícios separados por processo; testes de escrita usam chamados_test com rollback. O ensaio de concorrência com dois processos usa fixtures temporariamente gravadas com commit nesse banco para serem compartilhadas; finally remove exclusivamente os IDs fictícios criados pelo ensaio. Não rodar o worker manualmente nem apontá-lo a outro banco. Não há envio de e-mail na abertura/comentário, exportações, atendimento/SLA ou automações de negócio nesta etapa.
 
 Validação funcional por HTTP, Livewire e PostgreSQL. A revalidação de 09/11/2026 aprovou 73 testes e 967 asserções. Teclado, tela reduzida, celular físico e leitor de tela ainda precisam ser verificados pelo roteiro em docs/testes-etapa4.md. A etapa está concluída para desenvolvimento e piloto, com homologação visual e autorização de produção pendentes.
 
@@ -195,3 +195,10 @@ Em uma instalação local isolada, aplique as migrações incrementais pelo proc
 Após aplicar a migração incremental em uma instalação local, execute `php artisan schedule:work` e `php artisan queue:work ticket-alerts --queue=ticket-alerts` em terminais separados. A fila do TI e a caixa de alertas respeitam o escopo técnico do usuário. Indicadores e ocorrências de entrega estão disponíveis para gerentes dentro de seu escopo de leitura.
 
 O e-mail operacional fica desabilitado por padrão. Para ensaio local com contas fictícias, inicie o Mailpit do projeto e configure `TICKET_ALERT_LOCAL_MAIL=true` no ambiente local antes de iniciar o worker. Consulte [o roteiro de teste](docs/testes-etapa7.md) e [o estado da etapa](docs/progresso.md).
+
+## Etapa 8 — homologação e preparação
+
+- [Relatório de homologação e roteiro do piloto](docs/homologacao.md)
+- [Operação, backup, restauração e atualizações](docs/operacao.md)
+- [Instalação privada por empresa](docs/implantacao.md)
+- [Decisões corporativas e checklist de liberação](docs/pendencias-producao.md)

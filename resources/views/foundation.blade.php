@@ -20,7 +20,7 @@
             </div>
             <h1 class="mt-6 text-3xl font-semibold tracking-tight">{{ config('app.name') }}</h1>
             <p class="mt-4 leading-relaxed text-slate-600 dark:text-slate-300">Ambiente inicial de desenvolvimento. Esta tela permite verificar a renderização, os estilos e a comunicação da interface.</p>
-            <p class="mt-4 rounded-lg bg-slate-100 p-4 text-sm leading-relaxed dark:bg-slate-800">Verificação técnica do ambiente. <a href="{{ route('login') }}" class="underline">Acessar o sistema</a>. A abertura e o atendimento de chamados ainda não estão disponíveis.</p>
+            <p class="mt-4 rounded-lg bg-slate-100 p-4 text-sm leading-relaxed dark:bg-slate-800">Verifique a comunicação com o Livewire nesta página. <a href="{{ route('login') }}" class="underline">Acessar o sistema</a></p>
             <livewire:foundation-check />
         </div>
     </main>

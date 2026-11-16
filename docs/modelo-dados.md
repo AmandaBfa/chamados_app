@@ -1,6 +1,6 @@
 # Modelo de dados proposto
 
-Estado: etapas 1–4 implementadas e etapa 5 parcialmente implementada conforme detalhamento abaixo. Relógios de SLA e alertas continuam propostas técnicas e não constituem política corporativa aprovada. A especificação original permanece em especificacao.md. Uma instalação/banco por empresa; não haverá tenant_id nem autorização transversal.
+Estado: implementação das etapas 1–7 descrita abaixo. Relógios e alertas estão implementados com parâmetros de piloto, sujeitos à aprovação corporativa. A etapa 8 exercitou restauração sem mudança de esquema. A especificação original permanece em especificacao.md. Uma instalação/banco por empresa; não haverá tenant_id nem autorização transversal.
 
 ## Fundação implementada
 
@@ -122,3 +122,7 @@ A migração 2026_11_13_000001_create_ticket_alerts cria ticket_alerts com FKs r
 O índice ticket_events_activity serve à leitura do último movimento. A fila projeta idade, cobertura, inatividade, saldo e vencimentos em tabela temporária descartada ao fim da transação. Os indicadores consultam tickets, ticket_events e sla_breaches. Nenhuma fotografia de estoque foi criada.
 
 A migração 2026_11_16_000001_add_exception_notes_to_sla_versions armazena rótulos e observações de exceções por data no campo JSONB opcional sla_versions.exception_notes. O cálculo continua usando as janelas de sla_versions.exceptions.
+
+## Etapa 8 — integridade na recuperação
+
+O pacote de recuperação agrupa dump PostgreSQL e diretório privado `tickets/`, com manifesto. Cada chave de `attachments.storage_key` localiza o arquivo cujo tamanho e SHA-256 podem ser conferidos. O ensaio recuperou também vínculo de SLA, evento de abertura e visibilidade pública/interna em destino vazio. O procedimento pausa escritas entre sistemas durante a captura e preserva referência à chave usada para criptografia de MFA. A amostra da etapa 8 não incluiu MFA, sessões, jobs pendentes ou carga representativa. [Evidência](homologacao.md#ensaio-ac18) · [Operação](operacao.md#backup-consistente-e-restauração)
